@@ -1,7 +1,6 @@
-from fileinput import filename
+from source.utils import silent_remove
 import pandas as pd
 import subprocess
-import os
 
 class Classification:
     def __init__(self, working_dir, stanford_path) -> None:
@@ -23,9 +22,7 @@ class Classification:
 
         # Make sure a new file is created to avoid appending to the output from previous run
         new_filename = f'{self.working_dir}\source\input_files\\file_{file_idx}.txt'
-        if os.path.exists(new_filename):
-            os.remove(new_filename)
-
+        silent_remove(new_filename)
         file = open(new_filename, 'ab')
 
         for idx, row in covid_data.iterrows():
@@ -41,13 +38,15 @@ class Classification:
                 filenames.append(new_filename)
 
                 new_filename = f'{self.working_dir}\source\input_files\\file_{file_idx}.txt'
-                if os.path.exists(new_filename):
-                    os.remove(new_filename)
+                silent_remove(new_filename)
 
                 file = open(new_filename, 'ab')
         
-        with open(f'{self.working_dir}\source\input_files\\filelist.txt', 'a') as file:
-            file.writelines(filenames)
+        filelist_path = f'{self.working_dir}\source\input_files\\filelist.txt'
+        silent_remove(filelist_path)
+        with open(filelist_path, 'a') as file:
+            for filename in filenames:
+                file.write(f'{filename}\n')
 
         # Run the Stanford CoreNLP java package over all previously created files
         args = ['java', '-mx1g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', '-filelist', 
