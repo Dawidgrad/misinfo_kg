@@ -173,4 +173,5 @@ cython_debug/
 
 # Project specific ignores
 source/resources/
-source/outputs/
+source/input_files/
+source/output_files/
