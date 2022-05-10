@@ -9,9 +9,13 @@ class Classification:
 
     def run(self):
         # Retrieve the misinformation data
-        covid_data = pd.read_json(f'{self.working_dir}\source\\resources\IFCN_COVID19_12748.json')
-        covid_data = covid_data[['Claim', 'Explaination']]
-        covid_data = covid_data.reset_index()
+        # data = pd.read_json(f'{self.working_dir}\source\\resources\IFCN_COVID19_12748.json')
+        # data = data[['Claim', 'Explaination']]
+        # data = data.reset_index()
+
+        data = pd.read_json(f'{self.working_dir}\source\\resources\warDisinfoClaims.json')
+        data = data[['Claim', 'Title']]
+        data = data.reset_index()
 
         # self.data[['Claim', 'Explaination']].head(50).to_csv(r'C:\Users\gradd\Documents\Software Development\ifcn_covid_kg\source\outputs\ifcn_head.csv')
 
@@ -23,16 +27,16 @@ class Classification:
         # Make sure a new file is created to avoid appending to the output from previous run
         new_filename = f'{self.working_dir}\source\input_files\\file_{file_idx}.txt'
         silent_remove(new_filename)
-        file = open(new_filename, 'ab')
+        file = open(new_filename, 'a', encoding='utf-8')
 
-        for idx, row in covid_data.iterrows():
+        for idx, row in data.iterrows():
             claim = row['Claim'].strip().replace('\n', ' ')
             # Ignore explanation for now
             # explanation = row['Explaination'].strip() 
+            
+            file.write(f'{claim}\n')
 
-            file.write(f'{claim}\n'.encode('utf-8'))
-
-            if (idx + 1) % 500 == 0:
+            if (idx + 1) % 50 == 0:
                 file.close()
                 file_idx += 1
                 filenames.append(new_filename)
@@ -40,7 +44,7 @@ class Classification:
                 new_filename = f'{self.working_dir}\source\input_files\\file_{file_idx}.txt'
                 silent_remove(new_filename)
 
-                file = open(new_filename, 'ab')
+                file = open(new_filename, 'a', encoding='utf-8')
         
         filelist_path = f'{self.working_dir}\source\input_files\\filelist.txt'
         silent_remove(filelist_path)
@@ -49,8 +53,9 @@ class Classification:
                 file.write(f'{filename}\n')
 
         # Run the Stanford CoreNLP java package over all previously created files
-        args = ['java', '-mx1g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', '-filelist', 
-                f'{self.working_dir}\source\input_files\\filelist.txt', '-output',  f'{self.working_dir}\source\output_files\openie_output.txt']
+        args = ['java', '-mx8g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', '-filelist', 
+                f'{self.working_dir}\source\input_files\\filelist.txt', '-output',  
+                f'{self.working_dir}\source\output_files\openie_output.txt', '-tokenize.options', 'untokenizable=noneDelete']
         args = ' '.join(args)
 
         self.process = subprocess.Popen(args, shell=True, stderr=subprocess.STDOUT).wait()
