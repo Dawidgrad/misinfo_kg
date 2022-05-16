@@ -18,20 +18,21 @@ class Spacy(NamedEntityRecogniser):
         # Download the en_core_web_sm model
         subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
 
-    def get_entities(self, transcripts): 
+    def get_entities(self, sentences): 
         # Load the model
         nlp = spacy.load('en_core_web_sm')
         entities = list()
-        ignored_labels = ['TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'WORK_OF_ART']
+        # ignored_labels = ['TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'WORK_OF_ART']
+        ignored_labels = []
 
         # Get the NER tags
-        for single_transcript in transcripts:
-            for segment in single_transcript:
-                doc = nlp(segment)
-                for ent in doc.ents:
-                    if ent.label_ not in ignored_labels:
-                        entities = entities + [([ent.start_char, ent.end_char], ent.label_)]
-                entities.append('segment_end')
-            entities.append('transcript_end')
+        for sentence in sentences:
+            doc = nlp(sentence)
+            for ent in doc.ents:
+                if ent.label_ not in ignored_labels:
+                    entities = entities + [(ent, ent.label_)]
         
         return entities
+    
+    def convert_format(self):
+        return super().convert_format()

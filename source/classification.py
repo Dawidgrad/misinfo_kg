@@ -9,14 +9,17 @@ class Classification:
         self.stanford_path = stanford_path
 
     def run(self):
+        # TODO Clear the input & output files
+        # TODO Command line interface to select between datasets (+ future options)
+
         # Retrieve semantic triples
-        # self.ukraine_misinfo()
-        self.covid_misinfo()
+        filenames = self.ukraine_misinfo()
+        # self.covid_misinfo()
 
         # Read the sentences from the input files
-        # sentences = 
-
-        # named_entities = self.extract_ne(sentences)
+        named_entities = self.extract_ne(filenames)
+        print(f'{named_entities}\n')
+        print(f'Number of found entities in the entire dataset: {len(named_entities)}')
 
         return None
 
@@ -58,12 +61,12 @@ class Classification:
             for filename in filenames:
                 file.write(f'{filename}\n')
 
-        return None
+        return filenames
     
     def ukraine_misinfo(self):
         # Retrieve the misinformation data        
         data = pd.read_json(f'{self.working_dir}\source\\resources\warDisinfoClaims.json')
-        self.prepare_data(data, 'claim')
+        filenames = self.prepare_data(data, 'claim')
 
         # Run the Stanford CoreNLP java package over all previously created files
         args = ['java', '-mx8g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', '-filelist', 
@@ -73,14 +76,14 @@ class Classification:
 
         self.process = subprocess.Popen(args, shell=True, stderr=subprocess.STDOUT).wait()
         
-        return None
+        return filenames
 
     def covid_misinfo(self):
         # Retrieve the misinformation data   
         data = pd.read_json(f'{self.working_dir}\source\\resources\IFCN_COVID19_12748.json')
 
         # Prepare and process claims
-        self.prepare_data(data, 'Claim')
+        filenames = self.prepare_data(data, 'Claim')
 
         args = ['java', '-mx8g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', '-filelist', 
                 f'{self.working_dir}\source\input_files\\filelist.txt', '-output',  
@@ -90,7 +93,7 @@ class Classification:
         self.process = subprocess.Popen(args, shell=True, stderr=subprocess.STDOUT).wait()
 
         # Prepare and process explanations
-        self.prepare_data(data, 'Explaination')
+        filenames = filenames + self.prepare_data(data, 'Explaination')
         
         args = ['java', '-mx8g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', '-filelist', 
                 f'{self.working_dir}\source\input_files\\filelist.txt', '-output',  
@@ -99,9 +102,18 @@ class Classification:
 
         self.process = subprocess.Popen(args, shell=True, stderr=subprocess.STDOUT).wait()
 
-        return None
+        return filenames
 
-    def extract_ne(self, sentences):
+    def extract_ne(self, filenames):
+        sentences = []
+
+        # Get the sentences from input files
+        for filename in filenames:
+            with open(filename, 'r', encoding='utf-8') as file:
+                for line in file:
+                    sentences.append(line)
+
+        # Get the entities from the sentences
         spacy_ner = Spacy()
         entities = spacy_ner.get_entities(sentences)
 
