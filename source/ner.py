@@ -6,11 +6,7 @@ import spacy
 class NamedEntityRecogniser(ABC):
 
     @abstractmethod
-    def get_entities(self):
-        pass
-
-    @abstractmethod
-    def convert_format(self):
+    def get_entities(self, sentences):
         pass
 
 class Spacy(NamedEntityRecogniser):
@@ -33,6 +29,3 @@ class Spacy(NamedEntityRecogniser):
                     entities = entities + [(ent, ent.label_)]
         
         return entities
-    
-    def convert_format(self):
-        return super().convert_format()

@@ -1,4 +1,5 @@
 from source.ner import Spacy
+from source.pos import TextblobTagger
 from source.utils import silent_remove
 import pandas as pd
 import subprocess
@@ -16,10 +17,16 @@ class Classification:
         filenames = self.ukraine_misinfo()
         # self.covid_misinfo()
 
-        # Read the sentences from the input files
+        # Extract named entities from the data
         named_entities = self.extract_ne(filenames)
+        print('Named entities')
         print(f'{named_entities}\n')
         print(f'Number of found entities in the entire dataset: {len(named_entities)}')
+
+        # Extract part of speech tags from the data
+        pos_tags = self.extract_pos(filenames)
+        print('Part of speech tags')
+        print(f'{pos_tags}')
 
         return None
 
@@ -118,3 +125,18 @@ class Classification:
         entities = spacy_ner.get_entities(sentences)
 
         return entities
+
+    def extract_pos(self, filenames):
+        sentences = []
+
+        # Get the sentences from input files
+        for filename in filenames:
+            with open(filename, 'r', encoding='utf-8') as file:
+                for line in file:
+                    sentences.append(line)
+
+        # Get the pos tags from the sentences
+        textblob_pos = TextblobTagger()
+        pos_tags = textblob_pos.get_tags(sentences)
+
+        return pos_tags
