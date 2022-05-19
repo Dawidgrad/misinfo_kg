@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from textblob import TextBlob
+import spacy
 
 class POSTagger(ABC):
 
@@ -18,3 +19,17 @@ class TextblobTagger(POSTagger):
             tags.append(blob.tags)
 
         return tags
+
+class SpacyTagger(POSTagger):
+
+    def get_tags(self, sentences):
+        tags = []
+        nlp = spacy.load("en_core_web_sm")
+
+        for sentence in sentences:
+            doc = nlp(sentence)
+            for token in doc:
+                tags = tags + [(token.text, token.pos_)]
+
+        return tags
+

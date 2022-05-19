@@ -1,5 +1,5 @@
 from source.ner import Spacy
-from source.pos import TextblobTagger
+from source.pos import SpacyTagger, TextblobTagger
 from source.utils import silent_remove
 import pandas as pd
 import subprocess
@@ -12,6 +12,7 @@ class Classification:
     def run(self):
         # TODO Clear the input & output files
         # TODO Command line interface to select between datasets (+ future options)
+        # TODO Change name of the Classification class to something more suitable
 
         # Retrieve semantic triples
         filenames = self.ukraine_misinfo()
@@ -49,9 +50,9 @@ class Classification:
         # Get column data
         for idx, row in data.iterrows():
             cell = row[f'{column_name}'].strip().replace('\n', ' ')
-            file.write(f'{cell}\n')
+            file.write(f'{cell}.\n')
 
-            if (idx + 1) % 50 == 0:
+            if (idx + 1) % 1 == 0:
                 file.close()
                 file_idx += 1
 
@@ -136,7 +137,11 @@ class Classification:
                     sentences.append(line)
 
         # Get the pos tags from the sentences
-        textblob_pos = TextblobTagger()
+        textblob_pos = SpacyTagger()
         pos_tags = textblob_pos.get_tags(sentences)
 
         return pos_tags
+
+    def clean_up_files():
+
+        return None
