@@ -15,10 +15,21 @@ class Classification:
         # TODO Clear the input & output files
         # TODO Command line interface to select between datasets (+ future options)
         # TODO Change name of the Classification class to something more suitable
+        dataset_name = 'Ukraine'
 
         # Retrieve semantic triples
-        filenames = self.ukraine_misinfo()
-        # self.covid_misinfo()
+        if (dataset_name == 'Ukraine'):
+            filenames = self.ukraine_misinfo()
+            output_name = 'openie_output_ukraine_claims'
+        elif (dataset_name == 'Covid'):
+            filenames = self.covid_misinfo()
+            output_name = 'openie_output_covid_claims'
+            # TODO Handle explanations too?
+
+        # Convert the output of OpenIE to a csv file
+        read_output = pd.read_csv(f'{self.working_dir}/source/output_files/{output_name}.txt', encoding='ISO-8859-1',
+                                    sep='\t', names=['Confidence', 'Subject', 'Verb', 'Object'])
+        read_output.to_csv(f'{self.working_dir}/source/output_files/{output_name}.csv')
 
         # Extract named entities from the data
         named_entities = self.extract_ne(filenames)
