@@ -1,8 +1,10 @@
+import neuralcoref
 from source.ner import Spacy
 from source.pos import SpacyTagger, TextblobTagger
 from source.utils import silent_remove
 import pandas as pd
 import subprocess
+import spacy
 
 class Classification:
     def __init__(self, working_dir, stanford_path) -> None:
@@ -28,6 +30,15 @@ class Classification:
         pos_tags = self.extract_pos(filenames)
         print('Part of speech tags')
         print(f'{pos_tags}')
+
+        nlp = spacy.load('en')
+        neuralcoref.add_to_pipe(nlp)
+        doc = nlp(u'My sister has a dog. She loves him.')
+        print(doc._.has_coref)
+        print(doc._.coref_clusters)
+
+        self.coreference_resolution()
+        self.verb_lemmatisation()
 
         return None
 
@@ -142,6 +153,14 @@ class Classification:
 
         return pos_tags
 
-    def clean_up_files():
+    def coreference_resolution(self):
+
+        return None
+
+    def verb_lemmatisation(self):
+
+        return None
+
+    def clean_up_files(self):
 
         return None
