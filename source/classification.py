@@ -1,15 +1,20 @@
 import neuralcoref
+from source.knowledge_graph import KnowledgeGraph
 from source.ner import Spacy
 from source.pos import SpacyTagger, TextblobTagger
 from source.utils import silent_remove
 import pandas as pd
 import subprocess
 import spacy
+from nltk.stem import WordNetLemmatizer
+from nltk import pos_tag
+import nltk
 
 class Classification:
     def __init__(self, working_dir, stanford_path) -> None:
         self.working_dir = working_dir
         self.stanford_path = stanford_path
+        nltk.download('omw-1.4')
 
     def run(self):
         # TODO Clear the input & output files
@@ -27,30 +32,55 @@ class Classification:
             # TODO Handle explanations too?
 
         # Convert the output of OpenIE to a csv file
-        read_output = pd.read_csv(f'{self.working_dir}/source/output_files/{output_name}.txt', encoding='ISO-8859-1',
+        output_data = pd.read_csv(f'{self.working_dir}/source/output_files/{output_name}.txt', encoding='ISO-8859-1',
                                     sep='\t', names=['Confidence', 'Subject', 'Verb', 'Object'])
-        read_output.to_csv(f'{self.working_dir}/source/output_files/{output_name}.csv')
+        output_data.to_csv(f'{self.working_dir}/source/output_files/{output_name}.csv')
 
         # Extract named entities from the data
         named_entities = self.extract_ne(filenames)
-        print('Named entities')
-        print(f'{named_entities}\n')
-        print(f'Number of found entities in the entire dataset: {len(named_entities)}')
+
+        ne_dict = dict()
+        for ne in named_entities:
+            ne = str(ne[0])
+            if ne in ne_dict:
+                ne_dict[ne] += 1
+            else: 
+                ne_dict[ne] = 1
+
 
         # Extract part of speech tags from the data
         pos_tags = self.extract_pos(filenames)
-        print('Part of speech tags')
-        print(f'{pos_tags}')
 
-        nlp = spacy.load('en')
-        neuralcoref.add_to_pipe(nlp)
-        doc = nlp(u'My sister has a dog. She loves him.')
-        print(doc._.has_coref)
-        print(doc._.coref_clusters)
+        # data = self.coreference_resolution(output_data)
+        # data = self.verb_lemmatisation(data)
 
-        self.coreference_resolution()
-        self.verb_lemmatisation()
+        # subjects = []
+        # verbs = []
+        # objects = []
 
+        # for index, row in output_data.iterrows():
+        #     for ne in ne_dict:
+        #         if ne in row['Subject']:
+        #             subject = ne
+        #             # triple = (subject, row['Verb'], row['Object'])
+        #             # svo_triples.append(triple)
+        #             subjects.append(subject)
+        #             verbs.append(row['Verb'])
+        #             objects.append(row['Object'])
+
+        # df_data = {'Subject': subjects, 'Verb': verbs, 'Object': objects}
+        # dataframe = pd.DataFrame(data=df_data)
+        # dataframe.index.name = 'Index'
+        # dataframe.to_csv(f'{self.working_dir}/source/output_files/triples.csv')
+
+        knowledge_graph = KnowledgeGraph()
+
+        for index, row in output_data.iterrows():
+            for ne in ne_dict:
+                if ne in row['Subject']:
+
+                if ne in row['Object']:
+            
         return None
 
     def prepare_data(self, data, column_name):
@@ -164,13 +194,28 @@ class Classification:
 
         return pos_tags
 
-    def coreference_resolution(self):
+    def coreference_resolution(self, data):
+        resolved_data = data.reset_index()
+        nlp = spacy.load('en')
+        neuralcoref.add_to_pipe(nlp)
 
-        return None
+        for index, row in resolved_data.iterrows():
+            print(row['Verb'])
 
-    def verb_lemmatisation(self):
+        # doc = nlp(u'My sister has a dog. She loves him.')
+        # print(doc._.has_coref)
+        # print(doc._.coref_clusters)
 
-        return None
+        return resolved_data
+
+    def verb_lemmatisation(self, data):
+        lemmatised_data = data.reset_index()
+        wnl = WordNetLemmatizer()
+
+        for index, row in lemmatised_data.iterrows():
+            print(wnl.lemmatize(row['Verb'], pos='v'))
+
+        return lemmatised_data
 
     def clean_up_files(self):
 

@@ -18,8 +18,7 @@ class Spacy(NamedEntityRecogniser):
         # Load the model
         nlp = spacy.load('en_core_web_sm')
         entities = list()
-        # ignored_labels = ['TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'WORK_OF_ART']
-        ignored_labels = []
+        ignored_labels = ['TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'DATE']
 
         # Get the NER tags
         for sentence in sentences:
