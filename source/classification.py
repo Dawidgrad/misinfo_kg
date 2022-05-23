@@ -51,35 +51,23 @@ class Classification:
         # Extract part of speech tags from the data
         pos_tags = self.extract_pos(filenames)
 
+        # TODO incorporate POS somehow
+
         # data = self.coreference_resolution(output_data)
         # data = self.verb_lemmatisation(data)
-
-        # subjects = []
-        # verbs = []
-        # objects = []
-
-        # for index, row in output_data.iterrows():
-        #     for ne in ne_dict:
-        #         if ne in row['Subject']:
-        #             subject = ne
-        #             # triple = (subject, row['Verb'], row['Object'])
-        #             # svo_triples.append(triple)
-        #             subjects.append(subject)
-        #             verbs.append(row['Verb'])
-        #             objects.append(row['Object'])
-
-        # df_data = {'Subject': subjects, 'Verb': verbs, 'Object': objects}
-        # dataframe = pd.DataFrame(data=df_data)
-        # dataframe.index.name = 'Index'
-        # dataframe.to_csv(f'{self.working_dir}/source/output_files/triples.csv')
+        
+        # TODO incorporate coreference resolution
+        # TODO incorporate verb lemmatisation
 
         knowledge_graph = KnowledgeGraph()
 
         for index, row in output_data.iterrows():
             for ne in ne_dict:
+                # TODO Different ways to align the NER and triples?
                 if ne in row['Subject']:
-
-                if ne in row['Object']:
+                    knowledge_graph.add_relation(row['Subject'], row['Verb'], row['Object'])
+        
+        knowledge_graph.export_csv(self.working_dir)
             
         return None
 
