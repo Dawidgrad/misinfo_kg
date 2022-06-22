@@ -5,9 +5,6 @@ from source.pos import SpacyTagger, TextblobTagger
 from source.utils import silent_remove
 import pandas as pd
 import subprocess
-import spacy
-from nltk.stem import WordNetLemmatizer
-from nltk import pos_tag
 import nltk
 
 class Classification:
@@ -17,7 +14,7 @@ class Classification:
         nltk.download('omw-1.4')
 
     def run(self):
-        # TODO Clear the input & output files
+        # TODO Clean up the input & output files
         # TODO Command line interface to select between datasets (+ future options)
         # TODO Change name of the Classification class to something more suitable
         dataset_name = 'Ukraine'
@@ -198,7 +195,7 @@ class Classification:
 
     def verb_lemmatisation(self, data):
         lemmatised_data = data.reset_index()
-        wnl = WordNetLemmatizer()
+        wnl = nltk.stem.WordNetLemmatizer()
 
         for index, row in lemmatised_data.iterrows():
             print(wnl.lemmatize(row['Verb'], pos='v'))
