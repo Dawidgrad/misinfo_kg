@@ -1,4 +1,4 @@
-from source.classification import Classification
+from source.classification import Construction
 import argparse
 
 if __name__ == '__main__':
@@ -8,5 +8,5 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--stanford_path', help='Absolute path to the StanfordCoreNLP module', required=True)
     args = parser.parse_args()
 
-    misinfo_classification = Classification(args.working_dir, args.stanford_path)
+    misinfo_classification = Construction(args.working_dir, args.stanford_path)
     misinfo_classification.run()

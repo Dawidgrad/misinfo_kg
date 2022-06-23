@@ -5,18 +5,20 @@ from source.pos import SpacyTagger, TextblobTagger
 from source.utils import silent_remove
 import pandas as pd
 import subprocess
+import spacy
 import nltk
 
-class Classification:
+class Construction:
     def __init__(self, working_dir, stanford_path) -> None:
         self.working_dir = working_dir
         self.stanford_path = stanford_path
         nltk.download('omw-1.4')
 
     def run(self):
-        # TODO Clean up the input & output files
+        # TODO Clear the input & output files
+        self.clean_up_files()
+        
         # TODO Command line interface to select between datasets (+ future options)
-        # TODO Change name of the Classification class to something more suitable
         dataset_name = 'Ukraine'
 
         # Retrieve semantic triples
@@ -61,7 +63,7 @@ class Classification:
         for index, row in output_data.iterrows():
             for ne in ne_dict:
                 # TODO Different ways to align the NER and triples?
-                if ne in row['Subject']:
+                if ne in row['Subject'] and row['Object'] in ne_dict:
                     knowledge_graph.add_relation(row['Subject'], row['Verb'], row['Object'])
         
         knowledge_graph.export_csv(self.working_dir)
