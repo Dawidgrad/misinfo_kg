@@ -1,4 +1,7 @@
+import os
 import neuralcoref
+from tqdm import tqdm
+from source.gate_caller import GateCaller
 from source.knowledge_graph import KnowledgeGraph
 from source.ner import Spacy
 from source.pos import SpacyTagger, TextblobTagger
@@ -8,14 +11,16 @@ import subprocess
 import spacy
 import nltk
 
-class Construction:
-    def __init__(self, working_dir, stanford_path) -> None:
+class KGConstruction:
+    def __init__(self, working_dir, stanford_path, api_key, api_password) -> None:
         self.working_dir = working_dir
         self.stanford_path = stanford_path
+        self.api_key = api_key
+        self.api_password = api_password
         nltk.download('omw-1.4')
 
     def run(self):
-        # TODO Clear the input & output files
+        # Clear the input & output files
         self.clean_up_files()
         
         # TODO Command line interface to select between datasets (+ future options)
@@ -46,9 +51,12 @@ class Construction:
             else: 
                 ne_dict[ne] = 1
 
+        # Named entity recognition and disambiguation against DBpedia
+        ne_links = self.ne_disambiguation(filenames)
+        print(ne_links)
 
         # Extract part of speech tags from the data
-        pos_tags = self.extract_pos(filenames)
+        # pos_tags = self.extract_pos(filenames)
 
         # TODO incorporate POS somehow
 
@@ -166,6 +174,20 @@ class Construction:
 
         return entities
 
+    def ne_disambiguation(self, filenames):
+        # Call GATE Yodie
+        gate = GateCaller(self.api_key, self.api_password)
+
+        yodie_outputs = []
+
+        # Get the sentences from input files
+        for filename in tqdm(filenames):
+            with open(filename, 'r', encoding='utf-8') as file:
+                for line in file:
+                    yodie_outputs.append(gate.call_yodie(line))
+
+        return yodie_outputs
+
     def extract_pos(self, filenames):
         sentences = []
 
@@ -205,5 +227,10 @@ class Construction:
         return lemmatised_data
 
     def clean_up_files(self):
+        # Delete all files in input_files directory
+        for filename in os.listdir(f'{self.working_dir}\source\input_files'):
+            silent_remove(f'{self.working_dir}\source\input_files\\{filename}')
 
-        return None
+        # Delete all files in output_files directory
+        for filename in os.listdir(f'{self.working_dir}\source\output_files'):
+            silent_remove(f'{self.working_dir}\source\output_files\\{filename}')
