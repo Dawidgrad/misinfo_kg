@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from ratelimit import limits, sleep_and_retry
 from flair.data import Sentence
 from flair.models import SequenceTagger
+from tqdm import tqdm
 import requests
 import subprocess
 import spacy
 import json
-import tqdm
 import sys
 
 class NamedEntityRecogniser(ABC):
@@ -97,16 +97,12 @@ class Flair(NamedEntityRecogniser):
         print('Retrieving Named Entities with Flair...')
         for sentence in tqdm(sentences):
             input = Sentence(sentence)
-            tagger.predict(input)
-            entities = entities + sentence.to_dict(tag_type='ner')['entities']
+            tagger.predict(input)            
+            for entity in input.get_spans('ner'):
+                entities.append(entity.text)
         print()
 
         print(entities)
-        # Convert format of the Flair entities to universal one
-        # formatted_entities = self.convert_format(entities)
-        
-        # return formatted_entities
-
 
 class DeepPavlov(NamedEntityRecogniser):
     def __init__(self):
