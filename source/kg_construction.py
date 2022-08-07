@@ -1,9 +1,9 @@
 import os
 import neuralcoref
 from tqdm import tqdm
-from source.gate_caller import GateCaller
+from source.yodie import Yodie
 from source.knowledge_graph import KnowledgeGraph
-from source.ner import Spacy
+from source.ner import DeepPavlov, Flair, Gate, Spacy
 from source.pos import SpacyTagger, TextblobTagger
 from source.utils import silent_remove
 import pandas as pd
@@ -40,20 +40,23 @@ class KGConstruction:
                                     sep='\t', names=['Confidence', 'Subject', 'Verb', 'Object'])
         output_data.to_csv(f'{self.working_dir}/source/output_files/{output_name}.csv')
 
-        # Extract named entities from the data
-        named_entities = self.extract_ne(filenames)
-
+        # Extract named entities from the data using various NER packages
         ne_dict = dict()
-        for ne in named_entities:
-            ne = str(ne[0])
-            if ne in ne_dict:
-                ne_dict[ne] += 1
-            else: 
-                ne_dict[ne] = 1
 
-        # Named entity recognition and disambiguation against DBpedia
+        spacy = Spacy()
+        ne_dict = self.extract_ne(spacy, ne_dict, filenames)
+
+        gate = Gate(self.api_key, self.api_password)
+        ne_dict = self.extract_ne(gate, ne_dict, filenames)
+
+        flair = Flair()
+        ne_dict = self.extract_ne(flair, ne_dict, filenames)
+
+        deeppavlov = DeepPavlov()
+        ne_dict = self.extract_ne(deeppavlov, ne_dict, filenames)
+
+        # Disambiguation against DBpedia
         ne_links = self.ne_disambiguation(filenames)
-        print(ne_links)
 
         # Extract part of speech tags from the data
         # pos_tags = self.extract_pos(filenames)
@@ -159,7 +162,7 @@ class KGConstruction:
 
         return filenames
 
-    def extract_ne(self, filenames):
+    def extract_ne(self, ner, ne_dict, filenames):
         sentences = []
 
         # Get the sentences from input files
@@ -169,22 +172,28 @@ class KGConstruction:
                     sentences.append(line)
 
         # Get the entities from the sentences
-        spacy_ner = Spacy()
-        entities = spacy_ner.get_entities(sentences)
+        entities = ner.get_entities(sentences)
 
-        return entities
+        for ne in entities:
+            ne = str(ne[0])
+            if ne in ne_dict:
+                ne_dict[ne] += 1
+            else: 
+                ne_dict[ne] = 1
+
+        return ne_dict
 
     def ne_disambiguation(self, filenames):
         # Call GATE Yodie
-        gate = GateCaller(self.api_key, self.api_password)
+        gate = Yodie(self.api_key, self.api_password)
 
         yodie_outputs = []
 
         # Get the sentences from input files
-        for filename in tqdm(filenames):
+        for filename in filenames:
             with open(filename, 'r', encoding='utf-8') as file:
                 for line in file:
-                    yodie_outputs.append(gate.call_yodie(line))
+                    yodie_outputs.append(gate.call(line))
 
         return yodie_outputs
 
