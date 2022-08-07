@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 from ratelimit import limits, sleep_and_retry
+from flair.data import Sentence
+from flair.models import SequenceTagger
 import requests
 import subprocess
 import spacy
 import json
+import tqdm
 import sys
 
 class NamedEntityRecogniser(ABC):
@@ -23,12 +26,14 @@ class Spacy(NamedEntityRecogniser):
         entities = list()
         ignored_labels = ['TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'DATE']
 
+        print('Retrieving Named Entities with spaCy...')
         # Get the NER tags
-        for sentence in sentences:
+        for sentence in tqdm(sentences):
             doc = nlp(sentence)
             for ent in doc.ents:
                 if ent.label_ not in ignored_labels:
                     entities.append(ent)
+        print()
         
         return entities
 
@@ -57,9 +62,10 @@ class Gate(NamedEntityRecogniser):
 
     def get_entities(self, sentences):
         entities = list()
-       
+
+        print('Retrieving Named Entities with GATE...')
         # Get the NER tags
-        for sentence in sentences:
+        for sentence in tqdm(sentences):
             raw_data = self.call_gate_api(sentence)[0]
             dict_output = json.loads(raw_data)['entities']
             text = json.loads(raw_data)['text']
@@ -75,6 +81,7 @@ class Gate(NamedEntityRecogniser):
             if 'Organization' in dict_output:
                 for item in dict_output['Organization']:
                     entities.append(text[item['indices'][0]:item['indices'][1]])
+        print()
 
         return entities
     
@@ -83,7 +90,23 @@ class Flair(NamedEntityRecogniser):
         pass
     
     def get_entities(self, sentences): 
-        pass
+        # Load the NER tagger
+        tagger = SequenceTagger.load('ner')
+        entities = list()
+
+        print('Retrieving Named Entities with Flair...')
+        for sentence in tqdm(sentences):
+            input = Sentence(sentence)
+            tagger.predict(input)
+            entities = entities + sentence.to_dict(tag_type='ner')['entities']
+        print()
+
+        print(entities)
+        # Convert format of the Flair entities to universal one
+        # formatted_entities = self.convert_format(entities)
+        
+        # return formatted_entities
+
 
 class DeepPavlov(NamedEntityRecogniser):
     def __init__(self):

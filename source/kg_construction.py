@@ -46,14 +46,14 @@ class KGConstruction:
         spacy = Spacy()
         ne_dict = self.extract_ne(spacy, ne_dict, filenames)
 
-        gate = Gate(self.api_key, self.api_password)
-        ne_dict = self.extract_ne(gate, ne_dict, filenames)
-
         flair = Flair()
         ne_dict = self.extract_ne(flair, ne_dict, filenames)
 
         deeppavlov = DeepPavlov()
         ne_dict = self.extract_ne(deeppavlov, ne_dict, filenames)
+
+        gate = Gate(self.api_key, self.api_password)
+        ne_dict = self.extract_ne(gate, ne_dict, filenames)
 
         # Disambiguation against DBpedia
         ne_links = self.ne_disambiguation(filenames)
