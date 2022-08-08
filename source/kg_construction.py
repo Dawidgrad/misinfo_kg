@@ -55,6 +55,8 @@ class KGConstruction:
         gate = Gate(self.api_key, self.api_password)
         ne_dict = self.extract_ne(gate, ne_dict, filenames)
 
+        print(ne_dict)
+
         # Disambiguation against DBpedia
         ne_links = self.ne_disambiguation(filenames)
 
@@ -175,7 +177,6 @@ class KGConstruction:
         entities = ner.get_entities(sentences)
 
         for ne in entities:
-            ne = str(ne[0])
             if ne in ne_dict:
                 ne_dict[ne] += 1
             else: 

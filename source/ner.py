@@ -1,7 +1,8 @@
-from abc import ABC, abstractmethod
 from ratelimit import limits, sleep_and_retry
-from flair.data import Sentence
+from deeppavlov import configs, build_model
 from flair.models import SequenceTagger
+from flair.data import Sentence
+from abc import ABC, abstractmethod
 from tqdm import tqdm
 import requests
 import subprocess
@@ -27,7 +28,6 @@ class Spacy(NamedEntityRecogniser):
         ignored_labels = ['TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'DATE']
 
         print('Retrieving Named Entities with spaCy...')
-        # Get the NER tags
         for sentence in tqdm(sentences):
             doc = nlp(sentence)
             for ent in doc.ents:
@@ -64,7 +64,6 @@ class Gate(NamedEntityRecogniser):
         entities = list()
 
         print('Retrieving Named Entities with GATE...')
-        # Get the NER tags
         for sentence in tqdm(sentences):
             raw_data = self.call_gate_api(sentence)[0]
             dict_output = json.loads(raw_data)['entities']
@@ -87,26 +86,37 @@ class Gate(NamedEntityRecogniser):
     
 class Flair(NamedEntityRecogniser):
     def __init__(self):
-        pass
+        self.tagger = SequenceTagger.load('ner')
     
     def get_entities(self, sentences): 
         # Load the NER tagger
-        tagger = SequenceTagger.load('ner')
         entities = list()
 
         print('Retrieving Named Entities with Flair...')
         for sentence in tqdm(sentences):
             input = Sentence(sentence)
-            tagger.predict(input)            
+            self.tagger.predict(input)            
             for entity in input.get_spans('ner'):
                 entities.append(entity.text)
         print()
 
-        print(entities)
+        return entities
 
 class DeepPavlov(NamedEntityRecogniser):
     def __init__(self):
-        pass
+        # Load the model
+        self.ner_model = build_model(configs.ner.ner_ontonotes_bert, download=True)
     
-    def get_entities(self, sentences): 
-        pass
+    def get_entities(self, sentences):
+        entities = list()
+        
+        print('Retrieving Named Entities with DeepPavlov...')
+        for sentence in tqdm(sentences):
+            entity = self.ner_model([sentence])
+
+            for token, tag in zip(entity[0][0], entity[1][0]):
+                if tag != 'O':
+                    entities.append(token)
+        print()
+
+        return entities        
