@@ -28,14 +28,11 @@ class Yodie:
         ne_links = []
 
         if 'entities' in yodie_output and 'Mention' in yodie_output['entities']:
-            print(yodie_output['text'])
             for mention in yodie_output['entities']['Mention']:
                 inst = mention['inst']
                 indices = mention['indices']
                 confidence = mention['confidence']
                 text = yodie_output['text'][indices[0]:indices[1]]
                 ne_links.append((inst, text, confidence))
-                print((inst, text, confidence))
-            print('-----------------------------------------------------\n')
 
         return ne_links

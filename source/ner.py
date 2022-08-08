@@ -32,7 +32,7 @@ class Spacy(NamedEntityRecogniser):
             doc = nlp(sentence)
             for ent in doc.ents:
                 if ent.label_ not in ignored_labels:
-                    entities.append(ent)
+                    entities.append(str(ent))
         print()
         
         return entities

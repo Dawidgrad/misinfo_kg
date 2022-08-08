@@ -1,6 +1,7 @@
 import os
 import neuralcoref
 from tqdm import tqdm
+from source.lda import LDA
 from source.yodie import Yodie
 from source.knowledge_graph import KnowledgeGraph
 from source.ner import DeepPavlov, Flair, Gate, Spacy
@@ -40,6 +41,14 @@ class KGConstruction:
                                     sep='\t', names=['Confidence', 'Subject', 'Verb', 'Object'])
         output_data.to_csv(f'{self.working_dir}/source/output_files/{output_name}.csv')
 
+        # Perform LDA on triples
+        triples = list()
+        for index, row in output_data.iterrows():
+            triples.append(row['Subject'] + ' ' + row['Verb'] + ' ' + row['Object'])
+            
+        lda = LDA(triples)
+        lda.get_topics()
+
         # Extract named entities from the data using various NER packages
         ne_dict = dict()
 
@@ -55,10 +64,9 @@ class KGConstruction:
         gate = Gate(self.api_key, self.api_password)
         ne_dict = self.extract_ne(gate, ne_dict, filenames)
 
-        print(ne_dict)
-
         # Disambiguation against DBpedia
-        ne_links = self.ne_disambiguation(filenames)
+        ne_links = self.ne_disambiguation(ne_dict.keys())
+        print(ne_links)
 
         # Extract part of speech tags from the data
         # pos_tags = self.extract_pos(filenames)
@@ -184,17 +192,23 @@ class KGConstruction:
 
         return ne_dict
 
-    def ne_disambiguation(self, filenames):
+    def ne_disambiguation(self, entities):
         # Call GATE Yodie
-        gate = Yodie(self.api_key, self.api_password)
+        yodie = Yodie(self.api_key, self.api_password)
+        yodie_outputs = {}
 
-        yodie_outputs = []
-
-        # Get the sentences from input files
-        for filename in filenames:
-            with open(filename, 'r', encoding='utf-8') as file:
-                for line in file:
-                    yodie_outputs.append(gate.call(line))
+        # # Get the sentences from input files
+        # for filename in filenames:
+        #     with open(filename, 'r', encoding='utf-8') as file:
+        #         for line in file:
+        #             yodie_outputs.append(yodie.call(line))
+        
+        print('Disambiguating NEs...')
+        for entity in tqdm(entities):
+            entity_link = yodie.call(entity)
+            if entity_link:
+                yodie_outputs[entity_link[0][1]] = entity_link[0][0]
+        print()
 
         return yodie_outputs
 
