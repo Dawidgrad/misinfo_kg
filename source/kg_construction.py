@@ -41,6 +41,11 @@ class KGConstruction:
                                     sep='\t', names=['Confidence', 'Subject', 'Verb', 'Object'])
         output_data.to_csv(f'{self.working_dir}/source/output_files/{output_name}.csv')
 
+        # Remove rows with empty subject, object or verb
+        output_data = output_data[output_data['Subject'].notnull()]
+        output_data = output_data[output_data['Object'].notnull()]
+        output_data = output_data[output_data['Verb'].notnull()]
+
         # Perform LDA on triples
         triples = list()
         for index, row in output_data.iterrows():
@@ -109,18 +114,20 @@ class KGConstruction:
 
         # Get column data
         for idx, row in data.iterrows():
-            cell = row[f'{column_name}'].strip().replace('\n', ' ')
-            file.write(f'{cell}.\n')
+            # Make sure to ignore NaN values
+            if isinstance(row[f'{column_name}'], str):
+                cell = row[f'{column_name}'].strip().replace('\n', ' ')
+                file.write(f'{cell}.\n')
 
-            if (idx + 1) % 1 == 0:
-                file.close()
-                file_idx += 1
+                if (idx + 1) % 1 == 0:
+                    file.close()
+                    file_idx += 1
 
-                new_filename = f'{self.working_dir}\source\input_files\\{column_name}_{file_idx}.txt'
-                silent_remove(new_filename)
+                    new_filename = f'{self.working_dir}\source\input_files\\{column_name}_{file_idx}.txt'
+                    silent_remove(new_filename)
 
-                file = open(new_filename, 'a', encoding='utf-8')
-                filenames.append(new_filename)
+                    file = open(new_filename, 'a', encoding='utf-8')
+                    filenames.append(new_filename)
         
         # Create filelist
         filelist_path = f'{self.working_dir}\source\input_files\\filelist.txt'
@@ -133,8 +140,8 @@ class KGConstruction:
     
     def ukraine_misinfo(self):
         # Retrieve the misinformation data        
-        data = pd.read_json(f'{self.working_dir}\source\\resources\warDisinfoClaims.json')
-        filenames = self.prepare_data(data, 'claim')
+        data = pd.read_json(f'{self.working_dir}\source\\resources\stratcom-data.json')
+        filenames = self.prepare_data(data, 'summary')
 
         # Run the Stanford CoreNLP java package over all previously created files
         args = ['java', '-mx8g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', '-filelist', 
