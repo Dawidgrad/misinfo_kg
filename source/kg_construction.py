@@ -5,7 +5,7 @@ from source.lda import LDA
 from source.yodie import Yodie
 from source.knowledge_graph import KnowledgeGraph
 from source.ner import DeepPavlov, Flair, Gate, Spacy
-from source.pos import SpacyTagger, TextblobTagger
+from source.pos import SpacyTagger
 from source.utils import silent_remove
 import pandas as pd
 import subprocess
@@ -21,6 +21,7 @@ class KGConstruction:
         nltk.download('omw-1.4')
 
     def run(self):
+        # -------------------- Preparing the data --------------------
         # Clear the input & output files
         self.clean_up_files()
         
@@ -46,14 +47,28 @@ class KGConstruction:
         output_data = output_data[output_data['Object'].notnull()]
         output_data = output_data[output_data['Verb'].notnull()]
 
-        # Perform LDA on triples
-        triples = list()
+        # -------------------- LDA --------------------
+        triples = subjects = objects = verbs = list()
         for index, row in output_data.iterrows():
             triples.append(row['Subject'] + ' ' + row['Verb'] + ' ' + row['Object'])
+            subjects.append(row['Subject'])
+            objects.append(row['Object'])
+            verbs.append(row['Verb'])
             
-        lda = LDA(triples)
-        lda.get_topics()
+        lda = LDA(triples, subjects, objects, verbs)
 
+        # LDA performed on SVO separately
+        lda.get_topics_svo(num_topics=10, passes=20, workers=8)
+
+        return
+
+        # LDA performed on BOW
+        lda.get_topics_bow(num_topics=5, passes=2, workers=8)
+
+        # LDA performed on triples
+        lda.get_topics_triple(num_topics=5, passes=2, workers=8)
+
+        # -------------------- NER --------------------
         # Extract named entities from the data using various NER packages
         ne_dict = dict()
 
@@ -69,7 +84,8 @@ class KGConstruction:
         gate = Gate(self.api_key, self.api_password)
         ne_dict = self.extract_ne(gate, ne_dict, filenames)
 
-        # Disambiguation against DBpedia
+        # -------------------- Entity Linking --------------------
+        # Entity linking DBpedia 
         ne_links = self.ne_disambiguation(ne_dict.keys())
         print(ne_links)
 
@@ -84,6 +100,7 @@ class KGConstruction:
         # TODO incorporate coreference resolution
         # TODO incorporate verb lemmatisation
 
+        # -------------------- Knowledge Graph --------------------
         knowledge_graph = KnowledgeGraph()
 
         for index, row in output_data.iterrows():
