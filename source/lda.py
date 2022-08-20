@@ -13,6 +13,7 @@ class LDA:
         self.lemmatizer = WordNetLemmatizer()
         self.stemmer = SnowballStemmer('english')
 
+        # Prepare dictionaries and corpuses for all LDA models
         lda_words = self.preprocess(triples)
 
         self.dictionary_triple = Dictionary([triples])
@@ -28,9 +29,7 @@ class LDA:
         self.corpus_verb = [self.dictionary_verb.doc2bow([text]) for text in verbs]
         self.corpus_object = [self.dictionary_object.doc2bow([text]) for text in objects]
 
-    def lemmatize_stemming(self, text):
-        return self.stemmer.stem(self.lemmatizer.lemmatize(text, pos='v'))
-
+    # Preprocess tokenised words
     def preprocess(self, triples):
         lda_words = list()
         for item in triples:
@@ -39,16 +38,19 @@ class LDA:
 
         return lda_words
 
+    # Perform LDA using the BOW-based model
     def get_topics_bow(self, num_topics=10, passes=2, workers=2):
         lda_model = LdaMulticore(self.corpus_bow, num_topics=num_topics, id2word=self.dictionary_bow, passes=passes, workers=workers)
         print('\n\nBOW\n')
         self.print_topics(lda_model)
 
+    # Perform LDA using the Triple-based model
     def get_topics_triple(self, num_topics=10, passes=2, workers=2):
         lda_model = LdaMulticore(self.corpus_triple, num_topics=num_topics, id2word=self.dictionary_triple, passes=passes, workers=workers)
         print('\n\nTriples\n')
         self.print_topics(lda_model)
 
+    # Perform LDA using SVO-based model
     def get_topics_svo(self, num_topics=10, passes=2, workers=2):
         lda_model = LdaMulticore(self.corpus_subject, num_topics=num_topics, id2word=self.dictionary_subject, passes=passes, workers=workers)
         print('\n\nSubjects\n')

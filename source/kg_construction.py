@@ -28,7 +28,7 @@ class KGConstruction:
         # TODO Command line interface to select between datasets (+ future options)
         dataset_name = 'Ukraine'
 
-        # Retrieve semantic triples
+        # Retrieve semantic triples using OpenIE
         if (dataset_name == 'Ukraine'):
             filenames = self.ukraine_misinfo()
             output_name = 'openie_output_ukraine_claims'
@@ -48,25 +48,7 @@ class KGConstruction:
         output_data = output_data[output_data['Verb'].notnull()]
 
         # -------------------- LDA --------------------
-        triples = subjects = objects = verbs = list()
-        for index, row in output_data.iterrows():
-            triples.append(row['Subject'] + ' ' + row['Verb'] + ' ' + row['Object'])
-            subjects.append(row['Subject'])
-            objects.append(row['Object'])
-            verbs.append(row['Verb'])
-            
-        lda = LDA(triples, subjects, objects, verbs)
-
-        # LDA performed on SVO separately
-        lda.get_topics_svo(num_topics=10, passes=20, workers=8)
-
-        return
-
-        # LDA performed on BOW
-        lda.get_topics_bow(num_topics=5, passes=2, workers=8)
-
-        # LDA performed on triples
-        lda.get_topics_triple(num_topics=5, passes=2, workers=8)
+        self.perform_lda(output_data)
 
         # -------------------- NER --------------------
         # Extract named entities from the data using various NER packages
@@ -88,17 +70,6 @@ class KGConstruction:
         # Entity linking DBpedia 
         ne_links = self.ne_disambiguation(ne_dict.keys())
         print(ne_links)
-
-        # Extract part of speech tags from the data
-        # pos_tags = self.extract_pos(filenames)
-
-        # TODO incorporate POS somehow
-
-        # data = self.coreference_resolution(output_data)
-        # data = self.verb_lemmatisation(data)
-        
-        # TODO incorporate coreference resolution
-        # TODO incorporate verb lemmatisation
 
         # -------------------- Knowledge Graph --------------------
         knowledge_graph = KnowledgeGraph()
@@ -155,6 +126,7 @@ class KGConstruction:
 
         return filenames
     
+    # Use OpenIE to extract the triples from the Russo-Ukrainian war misinformation data
     def ukraine_misinfo(self):
         # Retrieve the misinformation data        
         data = pd.read_json(f'{self.working_dir}\source\\resources\stratcom-data.json')
@@ -170,6 +142,7 @@ class KGConstruction:
         
         return filenames
 
+    # Use OpenIE to extract the triples from covid-19 misinformation data
     def covid_misinfo(self):
         # Retrieve the misinformation data   
         data = pd.read_json(f'{self.working_dir}\source\\resources\IFCN_COVID19_12748.json')
@@ -195,6 +168,26 @@ class KGConstruction:
         self.process = subprocess.Popen(args, shell=True, stderr=subprocess.STDOUT).wait()
 
         return filenames
+
+    # Perform LDA with BOW, Triples, and SVO models
+    def perform_lda(self, output_data):
+        triples = subjects = objects = verbs = list()
+        for index, row in output_data.iterrows():
+            triples.append(row['Subject'] + ' ' + row['Verb'] + ' ' + row['Object'])
+            subjects.append(row['Subject'])
+            objects.append(row['Object'])
+            verbs.append(row['Verb'])
+            
+        lda = LDA(triples, subjects, objects, verbs)
+
+        # LDA performed on SVO separately
+        lda.get_topics_svo(num_topics=5, passes=2, workers=8)
+
+        # LDA performed on BOW
+        lda.get_topics_bow(num_topics=5, passes=2, workers=8)
+
+        # LDA performed on triples
+        lda.get_topics_triple(num_topics=5, passes=2, workers=8)
 
     def extract_ne(self, ner, ne_dict, filenames):
         sentences = []
@@ -236,21 +229,6 @@ class KGConstruction:
 
         return yodie_outputs
 
-    def extract_pos(self, filenames):
-        sentences = []
-
-        # Get the sentences from input files
-        for filename in filenames:
-            with open(filename, 'r', encoding='utf-8') as file:
-                for line in file:
-                    sentences.append(line)
-
-        # Get the pos tags from the sentences
-        textblob_pos = SpacyTagger()
-        pos_tags = textblob_pos.get_tags(sentences)
-
-        return pos_tags
-
     def coreference_resolution(self, data):
         resolved_data = data.reset_index()
         nlp = spacy.load('en')
@@ -264,15 +242,6 @@ class KGConstruction:
         # print(doc._.coref_clusters)
 
         return resolved_data
-
-    def verb_lemmatisation(self, data):
-        lemmatised_data = data.reset_index()
-        wnl = nltk.stem.WordNetLemmatizer()
-
-        for index, row in lemmatised_data.iterrows():
-            print(wnl.lemmatize(row['Verb'], pos='v'))
-
-        return lemmatised_data
 
     def clean_up_files(self):
         # Delete all files in input_files directory
