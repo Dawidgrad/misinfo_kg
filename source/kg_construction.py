@@ -5,7 +5,6 @@ from source.lda import LDA
 from source.yodie import Yodie
 from source.knowledge_graph import KnowledgeGraph
 from source.ner import DeepPavlov, Flair, Gate, Spacy
-from source.pos import SpacyTagger
 from source.utils import silent_remove
 import pandas as pd
 import subprocess
@@ -13,11 +12,12 @@ import spacy
 import nltk
 
 class KGConstruction:
-    def __init__(self, working_dir, stanford_path, api_key, api_password) -> None:
+    def __init__(self, working_dir, stanford_path, api_key, api_password, lda) -> None:
         self.working_dir = working_dir
         self.stanford_path = stanford_path
         self.api_key = api_key
         self.api_password = api_password
+        self.lda = lda
         nltk.download('omw-1.4')
 
     def run(self):
@@ -48,39 +48,41 @@ class KGConstruction:
         output_data = output_data[output_data['Verb'].notnull()]
 
         # -------------------- LDA --------------------
-        self.perform_lda(output_data)
+        if self.lda:
+            self.perform_lda(output_data)
+            
+        else:
+            # -------------------- NER --------------------
+            # Extract named entities from the data using various NER packages
+            ne_dict = dict()
 
-        # -------------------- NER --------------------
-        # Extract named entities from the data using various NER packages
-        ne_dict = dict()
+            spacy = Spacy()
+            ne_dict = self.extract_ne(spacy, ne_dict, filenames)
 
-        spacy = Spacy()
-        ne_dict = self.extract_ne(spacy, ne_dict, filenames)
+            flair = Flair()
+            ne_dict = self.extract_ne(flair, ne_dict, filenames)
 
-        flair = Flair()
-        ne_dict = self.extract_ne(flair, ne_dict, filenames)
+            deeppavlov = DeepPavlov()
+            ne_dict = self.extract_ne(deeppavlov, ne_dict, filenames)
 
-        deeppavlov = DeepPavlov()
-        ne_dict = self.extract_ne(deeppavlov, ne_dict, filenames)
+            gate = Gate(self.api_key, self.api_password)
+            ne_dict = self.extract_ne(gate, ne_dict, filenames)
 
-        gate = Gate(self.api_key, self.api_password)
-        ne_dict = self.extract_ne(gate, ne_dict, filenames)
+            # -------------------- Entity Linking --------------------
+            # Entity linking DBpedia 
+            ne_links = self.ne_disambiguation(ne_dict.keys())
+            print(ne_links)
 
-        # -------------------- Entity Linking --------------------
-        # Entity linking DBpedia 
-        ne_links = self.ne_disambiguation(ne_dict.keys())
-        print(ne_links)
+            # -------------------- Knowledge Graph --------------------
+            knowledge_graph = KnowledgeGraph()
 
-        # -------------------- Knowledge Graph --------------------
-        knowledge_graph = KnowledgeGraph()
-
-        for index, row in output_data.iterrows():
-            for ne in ne_dict:
-                # TODO Different ways to align the NER and triples?
-                if ne in row['Subject'] and row['Object'] in ne_dict:
-                    knowledge_graph.add_relation(row['Subject'], row['Verb'], row['Object'])
-        
-        knowledge_graph.export_csv(self.working_dir)
+            for index, row in output_data.iterrows():
+                for ne in ne_dict:
+                    # TODO Different ways to align the NER and triples?
+                    if ne in row['Subject'] and row['Object'] in ne_dict:
+                        knowledge_graph.add_relation(row['Subject'], row['Verb'], row['Object'])
+            
+            knowledge_graph.export_csv(self.working_dir)
             
         return None
 
