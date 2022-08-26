@@ -1,5 +1,5 @@
 from gensim.corpora import Dictionary
-from gensim.models import LdaMulticore
+from gensim.models import LdaMulticore, CoherenceModel
 from gensim.utils import simple_preprocess
 from gensim.parsing.preprocessing import STOPWORDS
 from nltk.stem import WordNetLemmatizer, SnowballStemmer
@@ -14,6 +14,7 @@ class LDA:
         self.stemmer = SnowballStemmer('english')
 
         # Prepare dictionaries and corpuses for all LDA models
+        self.triples = triples
         lda_words = self.preprocess(triples)
 
         self.dictionary_triple = Dictionary([triples])
@@ -43,26 +44,45 @@ class LDA:
         lda_model = LdaMulticore(self.corpus_bow, num_topics=num_topics, id2word=self.dictionary_bow, passes=passes, workers=workers)
         print('\n\nBOW\n')
         self.print_topics(lda_model)
+        self.get_coherence_score(lda_model, self.dictionary_bow)
 
     # Perform LDA using the Triple-based model
     def get_topics_triple(self, num_topics=10, passes=2, workers=2):
         lda_model = LdaMulticore(self.corpus_triple, num_topics=num_topics, id2word=self.dictionary_triple, passes=passes, workers=workers)
         print('\n\nTriples\n')
         self.print_topics(lda_model)
+        self.get_coherence_score(lda_model, self.dictionary_triple)
 
     # Perform LDA using SVO-based model
     def get_topics_svo(self, num_topics=10, passes=2, workers=2):
         lda_model = LdaMulticore(self.corpus_subject, num_topics=num_topics, id2word=self.dictionary_subject, passes=passes, workers=workers)
         print('\n\nSubjects\n')
         self.print_topics(lda_model)
+        self.get_coherence_score(lda_model, self.dictionary_subject)
 
         lda_model = LdaMulticore(self.corpus_verb, num_topics=num_topics, id2word=self.dictionary_verb, passes=passes, workers=workers)
         print('\n\nVerbs\n')
         self.print_topics(lda_model)
+        self.get_coherence_score(lda_model, self.dictionary_verb)
 
         lda_model = LdaMulticore(self.corpus_object, num_topics=num_topics, id2word=self.dictionary_object, passes=passes, workers=workers)
         print('\n\nObjects\n')
         self.print_topics(lda_model)
+        self.get_coherence_score(lda_model, self.dictionary_object)
+
+    # Calculate and print coherence (possible coherence metrics: c_v, u_mass, c_uci)
+    def get_coherence_score(self, lda_model, dictionary, coherence_metric='c_v'):
+        coherence_model_lda = CoherenceModel(model=lda_model, texts=self.triples, dictionary=dictionary, coherence=coherence_metric)
+
+        print('\n LDA model')
+        print(lda_model)
+        print('\n Dictionary')
+        print(dictionary)
+        print('\n Coherence metric')
+        print(coherence_metric)
+        
+        coherence_lda = coherence_model_lda.get_coherence()
+        print('\nCoherence Score:', coherence_lda)
 
     def print_topics(self, lda_model):
         for idx, topic in lda_model.print_topics(-1):

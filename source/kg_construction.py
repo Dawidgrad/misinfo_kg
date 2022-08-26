@@ -12,31 +12,35 @@ import spacy
 import nltk
 
 class KGConstruction:
-    def __init__(self, working_dir, stanford_path, api_key, api_password, lda) -> None:
+    def __init__(self, working_dir, stanford_path, api_key, api_password, lda, prepare_files) -> None:
         self.working_dir = working_dir
         self.stanford_path = stanford_path
         self.api_key = api_key
         self.api_password = api_password
         self.lda = lda
+        self.prepare_files = prepare_files
         nltk.download('omw-1.4')
 
     def run(self):
-        # -------------------- Preparing the data --------------------
-        # Clear the input & output files
-        self.clean_up_files()
+        if self.prepare_files:
+            # -------------------- Preparing the data --------------------
+            # Clear the input & output files
+            self.clean_up_files()
+            
+            # TODO Command line interface to select between datasets (+ future options)
+            dataset_name = 'Ukraine'
+
+            # Retrieve semantic triples using OpenIE
+            if (dataset_name == 'Ukraine'):
+                filenames = self.ukraine_misinfo()
+                output_name = 'openie_output_ukraine_claims'
+            elif (dataset_name == 'Covid'):
+                filenames = self.covid_misinfo()
+                output_name = 'openie_output_covid_claims'
+                # TODO Handle explanations too?
+
         
-        # TODO Command line interface to select between datasets (+ future options)
-        dataset_name = 'Ukraine'
-
-        # Retrieve semantic triples using OpenIE
-        if (dataset_name == 'Ukraine'):
-            filenames = self.ukraine_misinfo()
-            output_name = 'openie_output_ukraine_claims'
-        elif (dataset_name == 'Covid'):
-            filenames = self.covid_misinfo()
-            output_name = 'openie_output_covid_claims'
-            # TODO Handle explanations too?
-
+        output_name = 'openie_output_ukraine_claims' # Remove later
         # Convert the output of OpenIE to a csv file
         output_data = pd.read_csv(f'{self.working_dir}/source/output_files/{output_name}.txt', encoding='ISO-8859-1',
                                     sep='\t', names=['Confidence', 'Subject', 'Verb', 'Object'])
@@ -50,7 +54,7 @@ class KGConstruction:
         # -------------------- LDA --------------------
         if self.lda:
             self.perform_lda(output_data)
-            
+
         else:
             # -------------------- NER --------------------
             # Extract named entities from the data using various NER packages
@@ -173,7 +177,10 @@ class KGConstruction:
 
     # Perform LDA with BOW, Triples, and SVO models
     def perform_lda(self, output_data):
-        triples = subjects = objects = verbs = list()
+        triples = list()
+        subjects = list()
+        objects = list()
+        verbs = list()
         for index, row in output_data.iterrows():
             triples.append(row['Subject'] + ' ' + row['Verb'] + ' ' + row['Object'])
             subjects.append(row['Subject'])
@@ -182,14 +189,14 @@ class KGConstruction:
             
         lda = LDA(triples, subjects, objects, verbs)
 
+        # LDA performed on triples
+        lda.get_topics_triple(num_topics=10, passes=2, workers=2)
+
         # LDA performed on SVO separately
-        lda.get_topics_svo(num_topics=5, passes=2, workers=8)
+        lda.get_topics_svo(num_topics=10, passes=2, workers=2)
 
         # LDA performed on BOW
-        lda.get_topics_bow(num_topics=5, passes=2, workers=8)
-
-        # LDA performed on triples
-        lda.get_topics_triple(num_topics=5, passes=2, workers=8)
+        lda.get_topics_bow(num_topics=10, passes=2, workers=2)
 
     def extract_ne(self, ner, ne_dict, filenames):
         sentences = []
