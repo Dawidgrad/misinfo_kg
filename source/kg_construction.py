@@ -189,14 +189,22 @@ class KGConstruction:
             
         lda = LDA(triples, subjects, objects, verbs)
 
+        args = [[5, 1], [5, 3], [5, 5], [10, 1], [10, 3], [10, 5], [20, 1], [20, 3], [20, 5]]
+
         # LDA performed on triples
-        lda.get_topics_triple(num_topics=10, passes=2, workers=2)
+        # map(lda.get_topics_triple(num_topics=args[0], alpha=args[1], workers=2), args)
+        [lda.get_topics_triple(num_topics=arg[0], alpha=arg[1], workers=2) for arg in args]
+        # lda.get_topics_triple(num_topics=10, passes=2, workers=2)
 
         # LDA performed on SVO separately
-        lda.get_topics_svo(num_topics=10, passes=2, workers=2)
+        # map(lda.get_topics_svo(num_topics=args[0], alpha=args[1], workers=2), args)
+        [lda.get_topics_svo(num_topics=arg[0], alpha=arg[1], workers=2) for arg in args]
+        # lda.get_topics_svo(num_topics=10, passes=2, workers=2)
 
         # LDA performed on BOW
-        lda.get_topics_bow(num_topics=10, passes=2, workers=2)
+        # map(lda.get_topics_bow(num_topics=args[0], alpha=args[1], workers=2), args)
+        [lda.get_topics_bow(num_topics=arg[0], alpha=arg[1], workers=2) for arg in args]
+        # lda.get_topics_bow(num_topics=10, passes=2, workers=2)
 
     def extract_ne(self, ner, ne_dict, filenames):
         sentences = []
