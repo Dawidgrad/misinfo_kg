@@ -1,5 +1,4 @@
 from ratelimit import limits, sleep_and_retry
-from deeppavlov import configs, build_model
 from flair.models import SequenceTagger
 from flair.data import Sentence
 from abc import ABC, abstractmethod
@@ -100,23 +99,4 @@ class Flair(NamedEntityRecogniser):
                 entities.append(entity.text)
         print()
 
-        return entities
-
-class DeepPavlov(NamedEntityRecogniser):
-    def __init__(self):
-        # Load the model
-        self.ner_model = build_model(configs.ner.ner_ontonotes_bert, download=True)
-    
-    def get_entities(self, sentences):
-        entities = list()
-        
-        print('Retrieving Named Entities with DeepPavlov...')
-        for sentence in tqdm(sentences):
-            entity = self.ner_model([sentence])
-
-            for token, tag in zip(entity[0][0], entity[1][0]):
-                if tag != 'O':
-                    entities.append(token)
-        print()
-
-        return entities        
+        return entities  

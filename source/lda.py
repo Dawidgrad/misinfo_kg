@@ -73,7 +73,7 @@ class LDA:
     def get_coherence_score(self, lda_model, dictionary, data, coherence_metric='c_v', processes=2):
         coherence_model_lda = CoherenceModel(model=lda_model, texts=[data], dictionary=dictionary, coherence=coherence_metric, processes=processes) 
         coherence_lda = coherence_model_lda.get_coherence()
-        
+
         return coherence_lda
 
     def print_topics(self, lda_model, name, coherence_score):
@@ -86,5 +86,4 @@ class LDA:
             f.write('\n')
             f.write(f'Coherence Score: {coherence_score}')
             f.write('\n\n\n')
-        print('Topics written to source/output_files/lda_analysis.txt')
-        print()
+        print('\nTopics written to source/output_files/lda_analysis.txt')

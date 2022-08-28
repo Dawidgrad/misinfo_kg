@@ -26,17 +26,17 @@ if __name__ == '__main__':
         exit()
 
     # Ask user what they want to run: 1) LDA 2) Graph Construction
-    print('What would you like to do?')
+    print('\nWhat would you like to do?')
     print('1) LDA')
     print('2) Graph Construction')
     choice = input('Enter corresponding number: ')
 
     # Validate user input and pass the choice to KGConstruction class
     if choice == '1':
-        print('You have chosen LDA')
+        print('You have chosen LDA\n')
         misinfo_classification = KGConstruction(args.working_dir, args.stanford_path, args.api_key, args.api_password, lda=True, prepare_files=prepare_files)
     elif choice == '2':
-        print('You have chosen Graph Construction')
+        print('You have chosen Graph Construction\n')
         misinfo_classification = KGConstruction(args.working_dir, args.stanford_path, args.api_key, args.api_password, lda=False, prepare_files=prepare_files)
     else:
         print('Invalid choice')

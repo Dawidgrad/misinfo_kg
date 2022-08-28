@@ -1,10 +1,11 @@
 import os
+from pydoc import resolve
 import neuralcoref
 from tqdm import tqdm
 from source.lda import LDA
 from source.yodie import Yodie
 from source.knowledge_graph import KnowledgeGraph
-from source.ner import DeepPavlov, Flair, Gate, Spacy
+from source.ner import Flair, Gate, Spacy
 from source.utils import silent_remove
 import pandas as pd
 import subprocess
@@ -21,6 +22,10 @@ class KGConstruction:
         self.prepare_files = prepare_files
         nltk.download('omw-1.4')
 
+        # Prepare coreference resolution
+        self.nlp = spacy.load('en_core_web_sm')
+        neuralcoref.add_to_pipe(self.nlp)
+
     def run(self):
         if self.prepare_files:
             # -------------------- Preparing the data --------------------
@@ -30,6 +35,7 @@ class KGConstruction:
             # TODO Command line interface to select between datasets (+ future options)
             dataset_name = 'Ukraine'
 
+            print(f'Preparing data...')
             # Retrieve semantic triples using OpenIE
             if (dataset_name == 'Ukraine'):
                 filenames = self.ukraine_misinfo()
@@ -38,7 +44,6 @@ class KGConstruction:
                 filenames = self.covid_misinfo()
                 output_name = 'openie_output_covid_claims'
                 # TODO Handle explanations too?
-
         
         output_name = 'openie_output_ukraine_claims' # Remove later
         # Convert the output of OpenIE to a csv file
@@ -66,9 +71,6 @@ class KGConstruction:
             flair = Flair()
             ne_dict = self.extract_ne(flair, ne_dict, filenames)
 
-            deeppavlov = DeepPavlov()
-            ne_dict = self.extract_ne(deeppavlov, ne_dict, filenames)
-
             gate = Gate(self.api_key, self.api_password)
             ne_dict = self.extract_ne(gate, ne_dict, filenames)
 
@@ -80,7 +82,7 @@ class KGConstruction:
             # -------------------- Knowledge Graph --------------------
             knowledge_graph = KnowledgeGraph()
 
-            for index, row in output_data.iterrows():
+            for row in output_data.iterrows():
                 for ne in ne_dict:
                     # TODO Different ways to align the NER and triples?
                     if ne in row['Subject'] and row['Object'] in ne_dict:
@@ -107,11 +109,13 @@ class KGConstruction:
         filenames.append(new_filename)
 
         # Get column data
-        for idx, row in data.iterrows():
+        for idx, row in tqdm(data.iterrows()):
             # Make sure to ignore NaN values
             if isinstance(row[f'{column_name}'], str):
                 cell = row[f'{column_name}'].strip().replace('\n', ' ')
-                file.write(f'{cell}.\n')
+                doc = self.nlp(cell)
+                # file.write(f'{cell}.\n') 
+                file.write(f'{doc._.coref_resolved}.\n') # Use disambiguated text   
 
                 if (idx + 1) % 1 == 0:
                     file.close()
@@ -181,30 +185,24 @@ class KGConstruction:
         subjects = list()
         objects = list()
         verbs = list()
-        for index, row in output_data.iterrows():
-            triples.append(row['Subject'] + ' ' + row['Verb'] + ' ' + row['Object'])
-            subjects.append(row['Subject'])
-            objects.append(row['Object'])
-            verbs.append(row['Verb'])
+        for row in output_data.itertuples():
+            triples.append(row[2] + ' ' + row[3] + ' ' + row[4])
+            subjects.append(row[2])
+            verbs.append(row[3])
+            objects.append(row[4])
             
         lda = LDA(triples, subjects, objects, verbs)
 
         args = [[5, 1], [5, 3], [5, 5], [10, 1], [10, 3], [10, 5], [20, 1], [20, 3], [20, 5]]
 
         # LDA performed on triples
-        # map(lda.get_topics_triple(num_topics=args[0], alpha=args[1], workers=2), args)
         [lda.get_topics_triple(num_topics=arg[0], alpha=arg[1], workers=2) for arg in args]
-        # lda.get_topics_triple(num_topics=10, passes=2, workers=2)
 
         # LDA performed on SVO separately
-        # map(lda.get_topics_svo(num_topics=args[0], alpha=args[1], workers=2), args)
         [lda.get_topics_svo(num_topics=arg[0], alpha=arg[1], workers=2) for arg in args]
-        # lda.get_topics_svo(num_topics=10, passes=2, workers=2)
 
         # LDA performed on BOW
-        # map(lda.get_topics_bow(num_topics=args[0], alpha=args[1], workers=2), args)
         [lda.get_topics_bow(num_topics=arg[0], alpha=arg[1], workers=2) for arg in args]
-        # lda.get_topics_bow(num_topics=10, passes=2, workers=2)
 
     def extract_ne(self, ner, ne_dict, filenames):
         sentences = []
@@ -230,12 +228,6 @@ class KGConstruction:
         # Call GATE Yodie
         yodie = Yodie(self.api_key, self.api_password)
         yodie_outputs = {}
-
-        # # Get the sentences from input files
-        # for filename in filenames:
-        #     with open(filename, 'r', encoding='utf-8') as file:
-        #         for line in file:
-        #             yodie_outputs.append(yodie.call(line))
         
         print('Disambiguating NEs...')
         for entity in tqdm(entities):
@@ -245,20 +237,6 @@ class KGConstruction:
         print()
 
         return yodie_outputs
-
-    def coreference_resolution(self, data):
-        resolved_data = data.reset_index()
-        nlp = spacy.load('en')
-        neuralcoref.add_to_pipe(nlp)
-
-        for index, row in resolved_data.iterrows():
-            print(row['Verb'])
-
-        # doc = nlp(u'My sister has a dog. She loves him.')
-        # print(doc._.has_coref)
-        # print(doc._.coref_clusters)
-
-        return resolved_data
 
     def clean_up_files(self):
         # Delete all files in input_files directory
