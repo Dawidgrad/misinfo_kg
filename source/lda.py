@@ -1,5 +1,5 @@
 from gensim.corpora import Dictionary
-from gensim.models import LdaMulticore, CoherenceModel
+from gensim.models import LdaMulticore, CoherenceModel, LdaModel
 from gensim.utils import simple_preprocess
 from gensim.parsing.preprocessing import STOPWORDS
 from nltk.stem import WordNetLemmatizer, SnowballStemmer
@@ -21,10 +21,35 @@ class LDA:
         self.lda_words = self.preprocess(triples)
 
         self.dictionary_triple = Dictionary([triples])
-        self.corpus_triple = [self.dictionary_triple.doc2bow([text]) for text in triples]
+        self.corpus_triple = [self.dictionary_triple.doc2bow(text) for text in [triples]]
+        
+        # Write the contents of dictionary_triple in a loop to a file in source/output_files folder
+        with open('source/output_files/corpus_triple.txt', 'w', encoding='utf-8') as f:
+            input = [[text] for text in triples]
+            for item in enumerate(input):
+                f.write(f'{item}')
+                f.write('\n')
+
+        with open('source/output_files/dictionary_triple.txt', 'w', encoding='utf-8') as f:
+            input = [triples] # Roznica w reprezentacji w porownaniu do dictionary_bow
+            for item in enumerate(input):
+                f.write(f'{item}')
+                f.write('\n')
 
         self.dictionary_bow = Dictionary(self.lda_words)
         self.corpus_bow = [self.dictionary_bow.doc2bow(text) for text in self.lda_words]
+
+        with open('source/output_files/corpus_bow.txt', 'w', encoding='utf-8') as f:
+            input = [text for text in self.lda_words]
+            for item in enumerate(input):
+                f.write(f'{item}')
+                f.write('\n')
+
+        with open('source/output_files/dictionary_bow.txt', 'w', encoding='utf-8') as f:
+            input = self.lda_words
+            for item in enumerate(input):
+                f.write(f'{item}')
+                f.write('\n')
 
         self.dictionary_subject = Dictionary([subjects])
         self.dictionary_verb = Dictionary([verbs])
@@ -43,29 +68,29 @@ class LDA:
         return lda_words
 
     # Perform LDA using the BOW-based model
-    def get_topics_bow(self, num_topics, alpha, passes=2, workers=2):
-        lda_model = LdaMulticore(self.corpus_bow, num_topics=num_topics, id2word=self.dictionary_bow, passes=passes, workers=workers, alpha=alpha)
+    def get_topics_bow(self, num_topics, alpha, passes=1, workers=2):
+        lda_model = LdaModel(self.corpus_bow, num_topics=num_topics, id2word=self.dictionary_bow, passes=passes, alpha=alpha)
         flat_lda_words = [word for sublist in self.lda_words for word in sublist]
         coherence = self.get_coherence_score(lda_model, self.dictionary_bow, flat_lda_words, processes=workers)
         self.print_topics(lda_model, f'BOW - Topics = {num_topics}, Alpha = {alpha}', coherence)
 
     # Perform LDA using the Triple-based model
-    def get_topics_triple(self, num_topics, alpha, passes=2, workers=2):
-        lda_model = LdaMulticore(self.corpus_triple, num_topics=num_topics, id2word=self.dictionary_triple, passes=passes, workers=workers, alpha=alpha)
+    def get_topics_triple(self, num_topics, alpha, passes=100, workers=2):
+        lda_model = LdaModel(self.corpus_triple, num_topics=num_topics, id2word=self.dictionary_triple, passes=passes, alpha=alpha)
         coherence = self.get_coherence_score(lda_model, self.dictionary_triple, self.triples, processes=workers)
         self.print_topics(lda_model, f'Triples - Topics = {num_topics}, Alpha = {alpha}', coherence)
 
     # Perform LDA using SVO-based model
-    def get_topics_svo(self, num_topics, alpha, passes=2, workers=2):
-        lda_model = LdaMulticore(self.corpus_subject, num_topics=num_topics, id2word=self.dictionary_subject, passes=passes, workers=workers, alpha=alpha)
+    def get_topics_svo(self, num_topics, alpha, passes=1, workers=2):
+        lda_model = LdaModel(self.corpus_subject, num_topics=num_topics, id2word=self.dictionary_subject, passes=passes, alpha=alpha)
         coherence = self.get_coherence_score(lda_model, self.dictionary_subject, self.subjects)
         self.print_topics(lda_model, f'Subject - Topics = {num_topics}, Alpha = {alpha}', coherence)
 
-        lda_model = LdaMulticore(self.corpus_verb, num_topics=num_topics, id2word=self.dictionary_verb, passes=passes, workers=workers, alpha=alpha)
+        lda_model = LdaModel(self.corpus_verb, num_topics=num_topics, id2word=self.dictionary_verb, passes=passes, alpha=alpha)
         coherence = self.get_coherence_score(lda_model, self.dictionary_verb, self.verbs)
         self.print_topics(lda_model, f'Verb - Topics = {num_topics}, Alpha = {alpha}', coherence)
 
-        lda_model = LdaMulticore(self.corpus_object, num_topics=num_topics, id2word=self.dictionary_object, passes=passes, workers=workers, alpha=alpha)
+        lda_model = LdaModel(self.corpus_object, num_topics=num_topics, id2word=self.dictionary_object, passes=passes, alpha=alpha)
         coherence = self.get_coherence_score(lda_model, self.dictionary_object, self.objects, processes=workers)
         self.print_topics(lda_model, f'Object - Topics = {num_topics}, Alpha = {alpha}', coherence)
 

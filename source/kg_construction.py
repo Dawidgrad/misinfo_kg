@@ -114,8 +114,8 @@ class KGConstruction:
             if isinstance(row[f'{column_name}'], str):
                 cell = row[f'{column_name}'].strip().replace('\n', ' ')
                 doc = self.nlp(cell)
-                # file.write(f'{cell}.\n') 
-                file.write(f'{doc._.coref_resolved}.\n') # Use disambiguated text   
+                file.write(f'{cell}. Dummy is a dummy.\n') 
+                # file.write(f'{doc._.coref_resolved}.\n') # Use disambiguated text   
 
                 if (idx + 1) % 1 == 0:
                     file.close()
@@ -141,11 +141,22 @@ class KGConstruction:
         # Retrieve the misinformation data        
         data = pd.read_json(f'{self.working_dir}\source\\resources\stratcom-data.json')
         filenames = self.prepare_data(data, 'summary')
+        print(filenames)
+
+        # for idx, file in tqdm(enumerate(filenames)):
+        #     # Run the Stanford CoreNLP java package over all previously created files
+        #     args = ['java', '-mx8g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', file,
+        #             '-output', f'{self.working_dir}\source\output_files\openie_output_ukraine_claims_{idx}.txt',
+        #             '-tokenize.options', 'untokenizable=noneDelete', '-max_entailments_per_clause', '1']
+        #     args = ' '.join(args)
+
+        #     self.process = subprocess.Popen(args, shell=True, stderr=subprocess.STDOUT).wait()
 
         # Run the Stanford CoreNLP java package over all previously created files
-        args = ['java', '-mx8g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', '-filelist', 
-                f'{self.working_dir}\source\input_files\\filelist.txt', '-output',  
-                f'{self.working_dir}\source\output_files\openie_output_ukraine_claims.txt', '-tokenize.options', 'untokenizable=noneDelete']
+        args = ['java', '-mx8g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', 
+                '-filelist', f'{self.working_dir}\source\input_files\\filelist.txt',
+                '-output', f'{self.working_dir}\source\output_files\openie_output_ukraine_claims.txt',
+                '-tokenize.options', 'untokenizable=noneDelete', '-max_entailments_per_clause', '1']
         args = ' '.join(args)
 
         self.process = subprocess.Popen(args, shell=True, stderr=subprocess.STDOUT).wait()
@@ -185,6 +196,7 @@ class KGConstruction:
         subjects = list()
         objects = list()
         verbs = list()
+
         for row in output_data.itertuples():
             triples.append(row[2] + ' ' + row[3] + ' ' + row[4])
             subjects.append(row[2])
@@ -193,7 +205,10 @@ class KGConstruction:
             
         lda = LDA(triples, subjects, objects, verbs)
 
-        args = [[5, 1], [5, 3], [5, 5], [10, 1], [10, 3], [10, 5], [20, 1], [20, 3], [20, 5]]
+        # Remove the old output file before staring the LDA process
+        silent_remove(f'{self.working_dir}\source\output_files\lda_analysis.txt')
+
+        args = [[5, 'auto'], [5, 'auto'], [5, 'auto'], [10, 'auto'], [10, 'auto'], [10, 'auto'], [20, 'auto'], [20, 'auto'], [20, 'auto']]
 
         # LDA performed on triples
         [lda.get_topics_triple(num_topics=arg[0], alpha=arg[1], workers=2) for arg in args]
