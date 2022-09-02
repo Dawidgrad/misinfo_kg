@@ -196,9 +196,14 @@ class KGConstruction:
         subjects = list()
         objects = list()
         verbs = list()
+        doc_triples = list()
 
         for row in output_data.itertuples():
-            triples.append(row[2] + ' ' + row[3] + ' ' + row[4])
+            if row[2] == 'Dummy':
+                triples.append(doc_triples)
+                doc_triples = list()
+                continue
+            doc_triples.append(row[2] + ' ' + row[3] + ' ' + row[4])
             subjects.append(row[2])
             verbs.append(row[3])
             objects.append(row[4])
