@@ -197,32 +197,46 @@ class KGConstruction:
         objects = list()
         verbs = list()
         doc_triples = list()
+        doc_subjects = list()
+        doc_objects = list()
+        doc_verbs = list()
 
         for row in output_data.itertuples():
             if row[2] == 'Dummy':
                 triples.append(doc_triples)
+                subjects.append(doc_subjects)
+                objects.append(doc_objects)
+                verbs.append(doc_verbs)
                 doc_triples = list()
+                doc_subjects = list()
+                doc_objects = list()
+                doc_verbs = list()
                 continue
             doc_triples.append(row[2] + ' ' + row[3] + ' ' + row[4])
-            subjects.append(row[2])
-            verbs.append(row[3])
-            objects.append(row[4])
+            doc_subjects.append(row[2])
+            doc_objects.append(row[4])
+            doc_verbs.append(row[3])
+
+        triples = list(filter(None, triples))
+        subjects = list(filter(None, subjects))
+        objects = list(filter(None, objects))
+        verbs = list(filter(None, verbs))
             
         lda = LDA(triples, subjects, objects, verbs)
 
         # Remove the old output file before staring the LDA process
         silent_remove(f'{self.working_dir}\source\output_files\lda_analysis.txt')
 
-        args = [[5, 'auto'], [5, 'auto'], [5, 'auto'], [10, 'auto'], [10, 'auto'], [10, 'auto'], [20, 'auto'], [20, 'auto'], [20, 'auto']]
+        args = [[5, 1], [5, 10], [5, 100], [10, 1], [10, 10], [10, 100], [20, 1], [20, 10], [20, 100]]
 
         # LDA performed on triples
-        [lda.get_topics_triple(num_topics=arg[0], alpha=arg[1], workers=2) for arg in args]
+        [lda.get_topics_triple(num_topics=arg[0], passes=arg[1], workers=2) for arg in args]
 
         # LDA performed on SVO separately
-        [lda.get_topics_svo(num_topics=arg[0], alpha=arg[1], workers=2) for arg in args]
+        [lda.get_topics_svo(num_topics=arg[0], passes=arg[1], workers=2) for arg in args]
 
         # LDA performed on BOW
-        [lda.get_topics_bow(num_topics=arg[0], alpha=arg[1], workers=2) for arg in args]
+        [lda.get_topics_bow(num_topics=arg[0], passes=arg[1], workers=2) for arg in args]
 
     def extract_ne(self, ner, ne_dict, filenames):
         sentences = []

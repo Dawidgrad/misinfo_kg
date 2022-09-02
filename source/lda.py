@@ -14,7 +14,6 @@ class LDA:
         self.stemmer = SnowballStemmer('english')
 
         # Prepare dictionaries and corpuses for all LDA models
-        triples = list(filter(None, triples))
         self.triples = triples
         self.subjects = subjects
         self.objects = objects
@@ -27,18 +26,6 @@ class LDA:
 
         self.dictionary_bow = Dictionary(self.lda_words)
         self.corpus_bow = [self.dictionary_bow.doc2bow(text) for text in self.lda_words]
-
-        with open('source/output_files/corpus_bow.txt', 'w', encoding='utf-8') as f:
-            input = [text for text in self.lda_words]
-            for item in enumerate(input):
-                f.write(f'{item}')
-                f.write('\n')
-
-        with open('source/output_files/dictionary_bow.txt', 'w', encoding='utf-8') as f:
-            input = self.lda_words
-            for item in enumerate(input):
-                f.write(f'{item}')
-                f.write('\n')
 
         self.dictionary_subject = Dictionary(subjects)
         self.dictionary_verb = Dictionary(verbs)
@@ -62,32 +49,30 @@ class LDA:
         return lda_words
 
     # Perform LDA using the BOW-based model
-    def get_topics_bow(self, num_topics, alpha, passes=1, workers=2):
+    def get_topics_bow(self, num_topics, alpha='auto', passes=1, workers=2):
         lda_model = LdaModel(self.corpus_bow, num_topics=num_topics, id2word=self.dictionary_bow, passes=passes, alpha=alpha)
-        # flat_lda_words = [word for sublist in self.lda_words for word in sublist]
-        # print(flat_lda_words)
         coherence = self.get_coherence_score(lda_model, self.dictionary_bow, self.lda_words, processes=workers)
-        self.print_topics(lda_model, f'BOW - Topics = {num_topics}, Alpha = {alpha}', coherence)
+        self.print_topics(lda_model, f'BOW - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence)
 
     # Perform LDA using the Triple-based model
-    def get_topics_triple(self, num_topics, alpha, passes=1, workers=2):
+    def get_topics_triple(self, num_topics, alpha='auto', passes=1, workers=2):
         lda_model = LdaModel(self.corpus_triple, num_topics=num_topics, id2word=self.dictionary_triple, passes=passes, alpha=alpha)
         coherence = self.get_coherence_score(lda_model, self.dictionary_triple, self.triples, processes=workers)
-        self.print_topics(lda_model, f'Triples - Topics = {num_topics}, Alpha = {alpha}', coherence)
+        self.print_topics(lda_model, f'Triples - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence)
 
     # Perform LDA using SVO-based model
-    def get_topics_svo(self, num_topics, alpha, passes=1, workers=2):
+    def get_topics_svo(self, num_topics, alpha='auto', passes=1, workers=2):
         lda_model = LdaModel(self.corpus_subject, num_topics=num_topics, id2word=self.dictionary_subject, passes=passes, alpha=alpha)
         coherence = self.get_coherence_score(lda_model, self.dictionary_subject, self.subjects)
-        self.print_topics(lda_model, f'Subject - Topics = {num_topics}, Alpha = {alpha}', coherence)
+        self.print_topics(lda_model, f'Subject - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence)
 
         lda_model = LdaModel(self.corpus_verb, num_topics=num_topics, id2word=self.dictionary_verb, passes=passes, alpha=alpha)
         coherence = self.get_coherence_score(lda_model, self.dictionary_verb, self.verbs)
-        self.print_topics(lda_model, f'Verb - Topics = {num_topics}, Alpha = {alpha}', coherence)
+        self.print_topics(lda_model, f'Verb - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence)
 
         lda_model = LdaModel(self.corpus_object, num_topics=num_topics, id2word=self.dictionary_object, passes=passes, alpha=alpha)
         coherence = self.get_coherence_score(lda_model, self.dictionary_object, self.objects, processes=workers)
-        self.print_topics(lda_model, f'Object - Topics = {num_topics}, Alpha = {alpha}', coherence)
+        self.print_topics(lda_model, f'Object - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence)
 
     # Calculate and print coherence (possible coherence metrics: c_v, u_mass, c_uci)
     def get_coherence_score(self, lda_model, dictionary, data, coherence_metric='c_v', processes=2):
@@ -98,6 +83,7 @@ class LDA:
 
     def print_topics(self, lda_model, name, coherence_score):
         # Write topics to a file in source/output_files folder
+        print(f'\nCurrent model: {name}')
         with open('source/output_files/lda_analysis.txt', 'a', encoding='utf-8') as f:
             f.write(name + '\n')
             for idx, topic in lda_model.print_topics(num_words=10):
@@ -106,4 +92,4 @@ class LDA:
             f.write('\n')
             f.write(f'Coherence Score: {coherence_score}')
             f.write('\n\n\n')
-        print('\nTopics written to source/output_files/lda_analysis.txt')
+        print('Topics written to source/output_files/lda_analysis.txt')
