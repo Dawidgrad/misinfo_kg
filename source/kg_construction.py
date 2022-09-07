@@ -216,11 +216,6 @@ class KGConstruction:
             doc_subjects.append(row[2])
             doc_objects.append(row[4])
             doc_verbs.append(row[3])
-
-        triples = list(filter(None, triples))
-        subjects = list(filter(None, subjects))
-        objects = list(filter(None, objects))
-        verbs = list(filter(None, verbs))
             
         lda = LDA(triples, subjects, objects, verbs)
 
@@ -228,6 +223,7 @@ class KGConstruction:
         silent_remove(f'{self.working_dir}\source\output_files\lda_analysis.txt')
 
         args = [[5, 1], [5, 10], [5, 100], [10, 1], [10, 10], [10, 100], [20, 1], [20, 10], [20, 100]]
+        # args = [[2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1], [10, 1], [11, 1], [12, 1], [13, 1], [14, 1], [15, 1], [16, 1], [17, 1], [18, 1], [19, 1], [20, 1], [21, 1], [22, 1], [23, 1], [24, 1], [25, 1], [26, 1], [27, 1], [28, 1], [29, 1], [30, 1], [31, 1], [32, 1], [33, 1], [34, 1], [35, 1], [36, 1], [37, 1], [38, 1], [39, 1], [40, 1], [41, 1], [42, 1], [43, 1], [44, 1], [45, 1], [46, 1], [47, 1], [48, 1], [49, 1], [50, 1]]
 
         # LDA performed on triples
         [lda.get_topics_triple(num_topics=arg[0], passes=arg[1], workers=2) for arg in args]

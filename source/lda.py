@@ -2,7 +2,6 @@ from gensim.corpora import Dictionary
 from gensim.models import LdaMulticore, CoherenceModel, LdaModel
 from gensim.utils import simple_preprocess
 from gensim.parsing.preprocessing import STOPWORDS
-from nltk.stem import WordNetLemmatizer, SnowballStemmer
 import nltk
 
 class LDA:
@@ -10,48 +9,72 @@ class LDA:
         nltk.download('wordnet')
         self.stopwords = set(STOPWORDS)
         self.stopwords.update(['.', ',', '"', "'", '?', '!', ':', ';', '(', ')', '[', ']', '{', '}'])
-        self.lemmatizer = WordNetLemmatizer()
-        self.stemmer = SnowballStemmer('english')
 
         # Prepare dictionaries and corpuses for all LDA models
-        self.triples = triples
-        self.subjects = subjects
-        self.objects = objects
-        self.verbs = verbs
-        self.lda_words = self.preprocess(triples)
+        self.bow_data, self.triples, self.subjects, self.verbs, self.objects = self.preprocess_data(triples, subjects, verbs, objects)
 
         # Create dictionary and corpus for all models
-        self.dictionary_triple = Dictionary(triples)
-        self.corpus_triple = [self.dictionary_triple.doc2bow(doc) for doc in triples]
+        self.dictionary_triple = Dictionary(self.triples)
+        self.corpus_triple = [self.dictionary_triple.doc2bow(doc) for doc in self.triples]
 
-        self.dictionary_bow = Dictionary(self.lda_words)
-        self.corpus_bow = [self.dictionary_bow.doc2bow(text) for text in self.lda_words]
+        self.dictionary_bow = Dictionary(self.bow_data)
+        self.corpus_bow = [self.dictionary_bow.doc2bow(text) for text in self.bow_data]
 
-        self.dictionary_subject = Dictionary(subjects)
-        self.dictionary_verb = Dictionary(verbs)
-        self.dictionary_object = Dictionary(objects)
-        self.corpus_subject = [self.dictionary_subject.doc2bow(text) for text in subjects]
-        self.corpus_verb = [self.dictionary_verb.doc2bow(text) for text in verbs]
-        self.corpus_object = [self.dictionary_object.doc2bow(text) for text in objects]
+        self.dictionary_subject = Dictionary(self.subjects)
+        self.dictionary_verb = Dictionary(self.verbs)
+        self.dictionary_object = Dictionary(self.objects)
+        self.corpus_subject = [self.dictionary_subject.doc2bow(text) for text in self.subjects]
+        self.corpus_verb = [self.dictionary_verb.doc2bow(text) for text in self.verbs]
+        self.corpus_object = [self.dictionary_object.doc2bow(text) for text in self.objects]
 
-    # Preprocess tokenised words
-    def preprocess(self, docs):
-        lda_words = list()
-        for doc in docs:
-            tokenised = list()
-            for triple in doc:
-                tokenised += simple_preprocess(triple)
-            lda_words.append(list(filter(lambda x: x not in self.stopwords, tokenised)))
+    def preprocess_data(self, docs_triples, docs_subjects, docs_verbs, docs_objects):
+        bow_data = list()
+        triples_data = list()
+        subjects_data = list()
+        verbs_data = list()
+        objects_data = list()
 
-        # Filter entries that don't have any triples
-        lda_words = list(filter(None, lda_words))
+        # Preprocess text data for every type of model
+        for doc_tuple in zip(docs_triples, docs_subjects, docs_verbs, docs_objects):
+            tokenised_bow = list()
+            tokenised_triples = list()
+            tokenised_subject = list()
+            tokenised_verb = list()
+            tokenised_object = list()
 
-        return lda_words
+            for triple in doc_tuple[0]:
+                tokenised = simple_preprocess(triple)
+                tokenised_bow += tokenised
+                tokenised_triples.append(' '.join(tokenised))
+
+            for subject in doc_tuple[1]:
+                tokenised_subject += simple_preprocess(subject)
+
+            for verb in doc_tuple[2]:
+                tokenised_verb += simple_preprocess(verb)
+
+            for obj in doc_tuple[3]:
+                tokenised_object += simple_preprocess(obj)
+
+            bow_data.append(list(filter(lambda x: x not in self.stopwords, tokenised_bow)))
+            triples_data.append(tokenised_triples)
+            subjects_data.append(tokenised_subject)
+            verbs_data.append(tokenised_verb)
+            objects_data.append(tokenised_object)
+
+            # Remove empty lists from the data
+            bow_data = list(filter(None, bow_data))
+            triples_data = list(filter(None, triples_data))
+            subjects_data = list(filter(None, subjects_data))
+            verbs_data = list(filter(None, verbs_data))
+            objects_data = list(filter(None, objects_data))
+
+        return bow_data, triples_data, subjects_data, verbs_data, objects_data
 
     # Perform LDA using the BOW-based model
     def get_topics_bow(self, num_topics, alpha='auto', passes=1, workers=2):
         lda_model = LdaModel(self.corpus_bow, num_topics=num_topics, id2word=self.dictionary_bow, passes=passes, alpha=alpha)
-        coherence = self.get_coherence_score(lda_model, self.dictionary_bow, self.lda_words, processes=workers)
+        coherence = self.get_coherence_score(lda_model, self.dictionary_bow, self.bow_data, processes=workers)
         self.print_topics(lda_model, f'BOW - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence)
 
     # Perform LDA using the Triple-based model
@@ -83,7 +106,7 @@ class LDA:
 
     def print_topics(self, lda_model, name, coherence_score):
         # Write topics to a file in source/output_files folder
-        print(f'\nCurrent model: {name}')
+        print(f'\nModel trained: {name}')
         with open('source/output_files/lda_analysis.txt', 'a', encoding='utf-8') as f:
             f.write(name + '\n')
             for idx, topic in lda_model.print_topics(num_words=10):
