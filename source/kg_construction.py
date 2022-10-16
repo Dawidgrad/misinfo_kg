@@ -1,5 +1,4 @@
 import os
-from pydoc import resolve
 import neuralcoref
 from tqdm import tqdm
 from source.lda import LDA
@@ -7,6 +6,8 @@ from source.yodie import Yodie
 from source.knowledge_graph import KnowledgeGraph
 from source.ner import Flair, Gate, Spacy
 from source.utils import silent_remove
+import matplotlib.pyplot as plt
+from gensim.test.utils import datapath
 import pandas as pd
 import subprocess
 import spacy
@@ -113,9 +114,7 @@ class KGConstruction:
             # Make sure to ignore NaN values
             if isinstance(row[f'{column_name}'], str):
                 cell = row[f'{column_name}'].strip().replace('\n', ' ')
-                doc = self.nlp(cell)
                 file.write(f'{cell}. Dummy is a dummy.\n') 
-                # file.write(f'{doc._.coref_resolved}.\n') # Use disambiguated text   
 
                 if (idx + 1) % 1 == 0:
                     file.close()
@@ -141,16 +140,6 @@ class KGConstruction:
         # Retrieve the misinformation data        
         data = pd.read_json(f'{self.working_dir}\source\\resources\stratcom-data.json')
         filenames = self.prepare_data(data, 'summary')
-        print(filenames)
-
-        # for idx, file in tqdm(enumerate(filenames)):
-        #     # Run the Stanford CoreNLP java package over all previously created files
-        #     args = ['java', '-mx8g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', file,
-        #             '-output', f'{self.working_dir}\source\output_files\openie_output_ukraine_claims_{idx}.txt',
-        #             '-tokenize.options', 'untokenizable=noneDelete', '-max_entailments_per_clause', '1']
-        #     args = ' '.join(args)
-
-        #     self.process = subprocess.Popen(args, shell=True, stderr=subprocess.STDOUT).wait()
 
         # Run the Stanford CoreNLP java package over all previously created files
         args = ['java', '-mx8g', '-cp', self.stanford_path, 'edu.stanford.nlp.naturalli.OpenIE', 
@@ -222,17 +211,30 @@ class KGConstruction:
         # Remove the old output file before staring the LDA process
         silent_remove(f'{self.working_dir}\source\output_files\lda_analysis.txt')
 
-        args = [[5, 1], [5, 10], [5, 100], [10, 1], [10, 10], [10, 100], [20, 1], [20, 10], [20, 100]]
-        # args = [[2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1], [10, 1], [11, 1], [12, 1], [13, 1], [14, 1], [15, 1], [16, 1], [17, 1], [18, 1], [19, 1], [20, 1], [21, 1], [22, 1], [23, 1], [24, 1], [25, 1], [26, 1], [27, 1], [28, 1], [29, 1], [30, 1], [31, 1], [32, 1], [33, 1], [34, 1], [35, 1], [36, 1], [37, 1], [38, 1], [39, 1], [40, 1], [41, 1], [42, 1], [43, 1], [44, 1], [45, 1], [46, 1], [47, 1], [48, 1], [49, 1], [50, 1]]
+        args = [[10, 1], [11, 1], [12, 1], [13, 1], [14, 1], [15, 1], [16, 1], [17, 1], [18, 1], [19, 1], [20, 1]]
+        # args =  [[1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1], [10, 1], [11, 1], [12, 1], [13, 1], [14, 1], [15, 1], [16, 1], [17, 1], [18, 1], [19, 1], [20, 1], [21, 1], [22, 1], [23, 1], [24, 1], [25, 1], [26, 1], [27, 1], [28, 1], [29, 1], [30, 1], [31, 1], [32, 1], [33, 1], [34, 1], [35, 1], [36, 1], [37, 1], [38, 1], [39, 1], [40, 1], [41, 1], [42, 1], [43, 1], [44, 1], [45, 1], [46, 1], [47, 1], [48, 1], [49, 1], [50, 1]]
 
         # LDA performed on triples
-        [lda.get_topics_triple(num_topics=arg[0], passes=arg[1], workers=2) for arg in args]
+        coherence, lda_model = lda.get_topics_triple(num_topics=13, passes=1)
+        lda_model.save(f'{self.working_dir}\source\output_files\lda_model')
+        # coherence_scores_1, lda_model = [lda.get_topics_triple(num_topics=arg[0], passes=1, workers=2) for arg in args]
+        # coherence_scores_50 = [lda.get_topics_bow(num_topics=arg[0], passes=50, workers=2) for arg in args]
 
+        # Plot coherence scores as 3 different lines depending on number of passes for number of topics from 1-50
+        # plt.plot([arg[0] for arg in args], coherence_scores_1, label='Triples: 1 Pass')
+        # plt.plot([arg[0] for arg in args], coherence_scores_50, label='BoW: 50 Passes')
+        # plt.xlabel('Number of Topics')
+        # plt.ylabel('Coherence Score')
+        # plt.title('Comparison of Coherence Scores for Triples and BoW Models')
+        # plt.legend()
+        # plt.savefig(f'{self.working_dir}\source\output_files\coherence_scores_comparison.png')
+        # plt.clf()
+        
         # LDA performed on SVO separately
-        [lda.get_topics_svo(num_topics=arg[0], passes=arg[1], workers=2) for arg in args]
+        # [lda.get_topics_svo(num_topics=arg[0], passes=arg[1], workers=2) for arg in args]
 
         # LDA performed on BOW
-        [lda.get_topics_bow(num_topics=arg[0], passes=arg[1], workers=2) for arg in args]
+        # [lda.get_topics_bow(num_topics=arg[0], passes=arg[1], workers=2) for arg in args]
 
     def extract_ne(self, ner, ne_dict, filenames):
         sentences = []

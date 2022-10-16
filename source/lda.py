@@ -3,6 +3,8 @@ from gensim.models import LdaMulticore, CoherenceModel, LdaModel
 from gensim.utils import simple_preprocess
 from gensim.parsing.preprocessing import STOPWORDS
 import nltk
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 
 class LDA:
     def __init__(self, triples, subjects, objects, verbs):
@@ -12,6 +14,12 @@ class LDA:
 
         # Prepare dictionaries and corpuses for all LDA models
         self.bow_data, self.triples, self.subjects, self.verbs, self.objects = self.preprocess_data(triples, subjects, verbs, objects)
+
+        # Plot a word cloud based on self.triples
+        flattened_triples = [item for sublist in self.triples for item in sublist]
+        joined_triples = [triple.replace(' ', 'v') for triple in flattened_triples]
+        print(joined_triples)
+        WordCloud(width=1200, height=600).generate(' '.join(joined_triples)).to_file('wordcloud.png')
 
         # Create dictionary and corpus for all models
         self.dictionary_triple = Dictionary(self.triples)
@@ -43,7 +51,10 @@ class LDA:
             tokenised_object = list()
 
             for triple in doc_tuple[0]:
+                triple = triple.replace(' is ', ' ')
                 tokenised = simple_preprocess(triple)
+                if len(tokenised) < 3:
+                    continue
                 tokenised_bow += tokenised
                 tokenised_triples.append(' '.join(tokenised))
 
@@ -77,25 +88,31 @@ class LDA:
         coherence = self.get_coherence_score(lda_model, self.dictionary_bow, self.bow_data, processes=workers)
         self.print_topics(lda_model, f'BOW - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence)
 
+        return coherence
+
     # Perform LDA using the Triple-based model
     def get_topics_triple(self, num_topics, alpha='auto', passes=1, workers=2):
         lda_model = LdaModel(self.corpus_triple, num_topics=num_topics, id2word=self.dictionary_triple, passes=passes, alpha=alpha)
         coherence = self.get_coherence_score(lda_model, self.dictionary_triple, self.triples, processes=workers)
         self.print_topics(lda_model, f'Triples - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence)
 
+        return coherence, lda_model
+
     # Perform LDA using SVO-based model
     def get_topics_svo(self, num_topics, alpha='auto', passes=1, workers=2):
         lda_model = LdaModel(self.corpus_subject, num_topics=num_topics, id2word=self.dictionary_subject, passes=passes, alpha=alpha)
-        coherence = self.get_coherence_score(lda_model, self.dictionary_subject, self.subjects)
-        self.print_topics(lda_model, f'Subject - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence)
+        coherence_s = self.get_coherence_score(lda_model, self.dictionary_subject, self.subjects)
+        self.print_topics(lda_model, f'Subject - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence_s)
 
         lda_model = LdaModel(self.corpus_verb, num_topics=num_topics, id2word=self.dictionary_verb, passes=passes, alpha=alpha)
-        coherence = self.get_coherence_score(lda_model, self.dictionary_verb, self.verbs)
-        self.print_topics(lda_model, f'Verb - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence)
+        coherence_v = self.get_coherence_score(lda_model, self.dictionary_verb, self.verbs)
+        self.print_topics(lda_model, f'Verb - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence_v)
 
         lda_model = LdaModel(self.corpus_object, num_topics=num_topics, id2word=self.dictionary_object, passes=passes, alpha=alpha)
-        coherence = self.get_coherence_score(lda_model, self.dictionary_object, self.objects, processes=workers)
-        self.print_topics(lda_model, f'Object - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence)
+        coherence_o = self.get_coherence_score(lda_model, self.dictionary_object, self.objects, processes=workers)
+        self.print_topics(lda_model, f'Object - Topics = {num_topics}, Alpha = {alpha}, Passes = {passes}', coherence_o)
+
+        return (coherence_s + coherence_v + coherence_o) / 3.0
 
     # Calculate and print coherence (possible coherence metrics: c_v, u_mass, c_uci)
     def get_coherence_score(self, lda_model, dictionary, data, coherence_metric='c_v', processes=2):
@@ -109,7 +126,7 @@ class LDA:
         print(f'\nModel trained: {name}')
         with open('source/output_files/lda_analysis.txt', 'a', encoding='utf-8') as f:
             f.write(name + '\n')
-            for idx, topic in lda_model.print_topics(num_words=10):
+            for idx, topic in lda_model.print_topics(num_words=5):
                 f.write('Topic {}: {}'.format(idx + 1, topic))
                 f.write('\n')
             f.write('\n')
