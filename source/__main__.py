@@ -1,4 +1,5 @@
 from source.kg_construction import KGConstruction
+from source.utils import Mode
 import argparse
 
 if __name__ == '__main__':
@@ -29,15 +30,19 @@ if __name__ == '__main__':
     print('\nWhat would you like to do?')
     print('1) LDA')
     print('2) Graph Construction')
+    print('3) Disambiguation')
     choice = input('Enter corresponding number: ')
 
     # Validate user input and pass the choice to KGConstruction class
     if choice == '1':
         print('You have chosen LDA\n')
-        misinfo_classification = KGConstruction(args.working_dir, args.stanford_path, args.api_key, args.api_password, lda=True, prepare_files=prepare_files)
+        misinfo_classification = KGConstruction(args.working_dir, args.stanford_path, args.api_key, args.api_password, mode=Mode.LDA, prepare_files=prepare_files)
     elif choice == '2':
         print('You have chosen Graph Construction\n')
-        misinfo_classification = KGConstruction(args.working_dir, args.stanford_path, args.api_key, args.api_password, lda=False, prepare_files=prepare_files)
+        misinfo_classification = KGConstruction(args.working_dir, args.stanford_path, args.api_key, args.api_password, mode=Mode.CONSTRUCTION, prepare_files=prepare_files)
+    elif choice == '3':
+        print('You have chosen Disambiguation\n')
+        misinfo_classification = KGConstruction(args.working_dir, args.stanford_path, args.api_key, args.api_password, mode=Mode.DISAMBIGUATION, prepare_files=prepare_files)
     else:
         print('Invalid choice')
         exit()
